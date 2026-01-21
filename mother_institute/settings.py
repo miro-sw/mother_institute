@@ -40,7 +40,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'mother_institute.urls'
+ROOT_URLCONF = 'mother_institute.urls' 
 
 TEMPLATES = [
     {

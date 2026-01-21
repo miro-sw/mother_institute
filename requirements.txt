@@ -2,3 +2,5 @@ django==4.2.7
 pillow==10.1.0
 django-crispy-forms==2.1
 crispy-bootstrap4
+reportlab==3.6.12
+django-widget-tweaks==1.4.13
