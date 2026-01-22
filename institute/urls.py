@@ -19,6 +19,7 @@ urlpatterns = [
     # Account Management URLs
     path('account-section/', views.account_section, name='account_section'),
     path('student-account/<int:admission_id>/', views.student_account, name='student_account'),
+    path('account-search/', views.account_search_view, name='account_search'),
     path('add-expense/<int:admission_id>/', views.add_expense, name='add_expense'),
     path('add-payment/<int:admission_id>/', views.add_payment, name='add_payment'),
     path('edit-expense/<int:expense_id>/', views.edit_expense, name='edit_expense'),

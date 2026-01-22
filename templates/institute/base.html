@@ -663,6 +663,15 @@
                     </a>
                 </li>
                 {% endif %}
+                {% if user.user_type == 'admin' %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'account-search' in request.path %}active{% endif %}" 
+                        href="{% url 'account_search' %}">
+                        <i class="nav-icon fas fa-search-dollar"></i>
+                        <span>Advanced Account Search</span>
+                    </a>
+                </li>
+                {% endif %}
                 {% endif %}
                 
                 <!-- Additional menu items for logged-in users -->

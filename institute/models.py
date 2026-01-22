@@ -144,6 +144,7 @@ class Payment(models.Model):
     ])
     payment_type = models.CharField(max_length=50, choices=[
         ('tuition', 'Tuition Fee'),
+        ('food', 'Fooding'),
         ('hostel', 'Hostel Fee'),
         ('transport', 'Transportation'),
         ('library', 'Library'),
