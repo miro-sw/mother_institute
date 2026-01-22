@@ -7,6 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
 from django.contrib import messages
+from django.conf import settings
 from .models import *
 from .forms import *
 from django.db.models import Q, Sum
@@ -1084,3 +1085,61 @@ def register_user(request):
         form = UserRegistrationForm()
     
     return render(request, 'institute/register.html', {'form': form})
+
+def get_active_organization(request):
+    """Get the active organization for the current user/session"""
+    # In your case, you might have only one organization
+    # You can modify this based on your requirements
+    try:
+        organization = Organization.objects.filter(status='active').first()
+        return organization
+    except:
+        return None
+
+# Add this function to views.py
+
+def organization_settings(request):
+    """View for managing organization settings"""
+    if not request.user.is_authenticated or request.user.user_type != 'admin':
+        return redirect('login')
+    
+    # Try to get existing organization
+    try:
+        organization = Organization.objects.filter(status='active').first()
+    except:
+        organization = None
+    
+    if request.method == 'POST':
+        if organization:
+            form = OrganizationForm(request.POST, request.FILES, instance=organization)
+        else:
+            form = OrganizationForm(request.POST, request.FILES)
+        
+        if form.is_valid():
+            org = form.save(commit=False)
+            org.status = 'active'
+            org.save()
+            messages.success(request, 'Organization settings updated successfully!')
+            return redirect('organization_settings')
+    else:
+        if organization:
+            form = OrganizationForm(instance=organization)
+        else:
+            form = OrganizationForm()
+    
+    context = {
+        'organization': organization,
+        'form': form,
+    }
+    return render(request, 'institute/organization_settings.html', context)
+
+# Add this context processor function
+def organization_context(request):
+    """Context processor to add organization data to all templates"""
+    try:
+        organization = Organization.objects.filter(status='active').first()
+    except:
+        organization = None
+    return {
+        'organization': organization,
+    }
