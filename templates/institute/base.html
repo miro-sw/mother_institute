@@ -697,15 +697,6 @@
                     </a>
                 </li>
                 
-                <!-- Register Organization (Only for admin users) -->
-                <li class="nav-item">
-                    <a class="nav-link {% if 'register-organization' in request.path %}active{% endif %}" 
-                        href="{% url 'register_organization' %}">
-                        <i class="nav-icon fas fa-building"></i>
-                        <span>Register Organization</span>
-                    </a>
-                </li>
-                
                 {% if user.user_type == 'admin' %}
                 <!-- Search Admission (Only for admin users) -->
                 <li class="nav-item">
