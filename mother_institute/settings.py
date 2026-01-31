@@ -8,11 +8,20 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-=-g9@hs+9m+yl+jwOb!j68i_@8l*v$3jwloqk4cfn$ggr8e6o7'
+import os
+from django.core.exceptions import ImproperlyConfigured
 
-DEBUG = True
+# simple env helper
+def env(key, default=None, required=False):
+    v = os.getenv(key, default)
+    if required and (v is None or v == ''):
+        raise ImproperlyConfigured(f"Missing required env var: {key}")
+    return v
 
-ALLOWED_HOSTS = []
+# NOTE: for quick local testing a default is provided; set DJANGO_SECRET_KEY in production
+SECRET_KEY = env('DJANGO_SECRET_KEY', 'django-insecure-=-g9@hs+9m+yl+jwOb!j68i_@8l*v$3jwloqk4cfn$ggr8e6o7')
+DEBUG = env('DJANGO_DEBUG', 'True').lower() in ('1', 'true', 'yes')
+ALLOWED_HOSTS = [h.strip() for h in env('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if h.strip()]
 
 # Application definition
 
@@ -23,15 +32,25 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # third-party
+    'rest_framework',
+    'corsheaders',
+
+    # local apps
     'institute',
     'crispy_forms',
     'crispy_bootstrap4',
 ]
 
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+# If you use WhiteNoise for static files in production, STATICFILES_STORAGE is set below.
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # WhiteNoise should be directly after SecurityMiddleware when used
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -111,5 +130,21 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'home'
 
-# For production, add CSRF trusted origins
+# CORS / API / production helpers
+# Allow Streamlit (local and Streamlit Cloud) to call the API — override via env in production
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:8501',
+    'http://127.0.0.1:8501',
+    'https://share.streamlit.io',
+]
+# Example for CSRF trusted origins (enable/override in production):
 # CSRF_TRUSTED_ORIGINS = ['https://yourdomain.com']
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly'
+    ]
+}
+
+# WhiteNoise: compressed static files served directly by the Django app (good for simple deployments)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
