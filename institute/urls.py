@@ -13,7 +13,6 @@ urlpatterns = [
     path('delete-user/<int:user_id>/', views.delete_user, name='delete_user'),
     path('admission-form/', views.admission_form, name='admission_form'),
     path('search-admission/', views.search_admission, name='search_admission'),
-    path('register-organization/', views.register_organization, name='register_organization'),
     # Account Management URLs
     path('account-section/', views.account_section, name='account_section'),
     path('student-account/<int:admission_id>/', views.student_account, name='student_account'),
