@@ -54,12 +54,14 @@
                 <div class="card-body text-center">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-title text-muted">Current Balance</h6>
-                            <h2 class="card-text {% if balance >= 0 %}text-success{% else %}text-danger{% endif %}">
-                                ₹{{ balance }}
-                            </h2>
+                            <h6 class="card-title text-muted">Total Fees</h6>
+                            <h4 class="card-text text-primary">₹{{ total_fee }}</h4>
+                            <h6 class="card-title text-muted mt-2">Due Amount</h6>
+                            <h4 class="card-text {% if due_amount <= 0 %}text-success{% else %}text-danger{% endif %}">
+                                ₹{{ due_amount|floatformat:2 }}
+                            </h4>
                         </div>
-                        <i class="fas fa-wallet fa-3x {% if balance >= 0 %}text-success{% else %}text-danger{% endif %} opacity-50"></i>
+                        <i class="fas fa-wallet fa-3x text-muted opacity-50"></i>
                     </div>
                 </div>
             </div>

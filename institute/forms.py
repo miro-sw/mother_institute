@@ -4,11 +4,11 @@ from .models import *
 
 class UserRegistrationForm(UserCreationForm):
     user_type = forms.ChoiceField(choices=CustomUser.USER_TYPE_CHOICES, required=True)
-    uid = forms.CharField(max_length=100, required=True)
+    # uid is now auto-generated, so remove from form
     
     class Meta:
         model = CustomUser
-        fields = ['username', 'password1', 'password2', 'uid', 'user_type']
+        fields = ['username', 'password1', 'password2', 'user_type']
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -16,12 +16,8 @@ class UserRegistrationForm(UserCreationForm):
         # Remove help text ONLY for username field
         self.fields['username'].help_text = ''
         
-        # Remove help text from uid field if you want
-        self.fields['uid'].help_text = ''
-        
     def save(self, commit=True):
         user = super().save(commit=False)
-        user.uid = self.cleaned_data['uid']
         user.user_type = self.cleaned_data['user_type']
         if commit:
             user.save()

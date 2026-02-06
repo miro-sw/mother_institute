@@ -1,0 +1,63 @@
+{% extends 'institute/base.html' %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: #1e3a8a;"><i class="fas fa-users me-2"></i>Admitted Students</h1>
+            <p class="text-muted mb-0">Total admitted: <strong>{{ admitted_count }}</strong></p>
+        </div>
+        <div>
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if admitted_students %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Admission ID</th>
+                            <th>Student Photo</th>
+                            <th>Student Name</th>
+                            <th>Course</th>
+                            <th>Admission Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for s in admitted_students %}
+                        <tr>
+                            <td><span class="badge bg-primary">{{ s.admission_id }}</span></td>
+                            <td>
+                                {% if s.student_image %}
+                                <img src="{{ s.student_image.url }}" alt="{{ s.student_name }}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">
+                                {% else %}
+                                <div style="width:40px;height:40px;background:#f8f9fa;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>{{ s.student_name }}<br><small class="text-muted">{{ s.mobile_number }}</small></td>
+                            <td>{{ s.course }}</td>
+                            <td>{{ s.admission_date|date:"d/m/Y" }}</td>
+                            <td>
+                                <a href="{% url 'student_account' s.id %}" class="btn btn-sm btn-outline-primary">View Account</a>
+                                <a href="{% url 'search_admission' %}?search={{ s.admission_id }}" class="btn btn-sm btn-outline-warning">Edit</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <p class="text-muted">No admitted students yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

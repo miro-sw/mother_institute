@@ -9,11 +9,20 @@ class CustomUser(AbstractUser):
         ('student', 'Student'),
     )
     
-    uid = models.CharField(max_length=50, unique=True)
+    uid = models.CharField(max_length=50, unique=True, blank=True)
     mobile = models.CharField(max_length=15, blank=True, null=True)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='student')
     status = models.CharField(max_length=20, default='active')
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    def save(self, *args, **kwargs):
+        # Generate uid if not already set
+        if not self.uid:
+            # Generate a unique uid, e.g., using username or a random string
+            import uuid
+            self.uid = str(uuid.uuid4())[:8].upper()  # Example: first 8 chars of UUID, uppercase
+        
+        super().save(*args, **kwargs)
     
     def __str__(self):
         return f"{self.username} - {self.user_type}"
@@ -87,6 +96,10 @@ class Admission(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     submitted_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
+    # New fields to separate registration vs actual admission
+    is_admitted = models.BooleanField(default=False, verbose_name="Admitted")
+    admission_date = models.DateField(null=True, blank=True)
+    admitted_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='admitted_students')
     
     def save(self, *args, **kwargs):
         # Generate custom admission ID if not already set

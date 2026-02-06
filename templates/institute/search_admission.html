@@ -780,65 +780,92 @@
         </div>
     </div>
     
-    <!-- Recent Admissions -->
+    <!-- Recent Admissions (with bulk admit controls) -->
     <div class="card border-0 shadow-sm mt-4">
         <div class="card-body">
             <h5 class="card-title mb-3">
                 <i class="fas fa-history me-2 text-info"></i>Recent Admissions
             </h5>
-            
-            <div class="table-responsive">
-                <table class="table table-sm table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Admission ID</th>
-                            <th>Student Photo</th>
-                            <th>Student Name</th>
-                            <th>Mobile</th>
-                            <th>Father's Name</th>
-                            <th>Course</th>
-                            <th>Date</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for recent_admission in recent_admissions %}
-                        <tr>
-                            <td>
-                                <span class="badge bg-primary">{{ recent_admission.admission_id|default:"None" }}</span>
-                            </td>
-                            <td>
-                                {% if recent_admission.student_image %}
-                                <img src="{{ recent_admission.student_image.url }}" 
-                                        alt="{{ recent_admission.student_name }}" 
-                                        class="student-photo-thumb-small"
-                                        style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
-                                {% else %}
-                                <div class="no-photo-thumb-small" style="width: 40px; height: 40px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-user text-muted fa-sm"></i>
-                                </div>
-                                {% endif %}
-                            </td>
-                            <td>{{ recent_admission.student_name }}</td>
-                            <td>{{ recent_admission.mobile_number }}</td>
-                            <td>{{ recent_admission.father_name }}</td>
-                            <td><span class="badge bg-info">{{ recent_admission.course }}</span></td>
-                            <td>{{ recent_admission.created_at|date:"d/m/Y" }}</td>
-                            <td>
-                                <a href="{% url 'search_admission' %}?search={{ recent_admission.admission_id|default:recent_admission.mobile_number }}" 
-                                    class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-edit"></i> Edit
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8" class="text-center">No admissions found</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+
+            <form method="POST" id="bulkAdmitForm">
+                {% csrf_token %}
+                <div class="d-flex justify-content-between mb-2">
+                    <div>
+                        <button type="submit" class="btn btn-success btn-sm" name="bulk_action" value="mark_admitted">
+                            <i class="fas fa-user-check me-1"></i> Mark Selected as Admitted
+                        </button>
+                        <button type="submit" class="btn btn-secondary btn-sm ms-2" name="bulk_action" value="unmark_admitted">
+                            <i class="fas fa-user-times me-1"></i> Unmark Selected
+                        </button>
+                    </div>
+                    <div>
+                        <small class="text-muted">Tip: use the checkboxes to select multiple registrations.</small>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:32px;"><input type="checkbox" id="selectAllRecent"></th>
+                                <th>Admission ID</th>
+                                <th>Student Photo</th>
+                                <th>Student Name</th>
+                                <th>Mobile</th>
+                                <th>Course</th>
+                                <th>Date</th>
+                                <th>Admitted</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for recent_admission in recent_admissions %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" name="selected_admissions" value="{{ recent_admission.id }}">
+                                </td>
+                                <td>
+                                    <span class="badge bg-primary">{{ recent_admission.admission_id|default:"None" }}</span>
+                                </td>
+                                <td>
+                                    {% if recent_admission.student_image %}
+                                    <img src="{{ recent_admission.student_image.url }}" 
+                                            alt="{{ recent_admission.student_name }}" 
+                                            class="student-photo-thumb-small"
+                                            style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                    {% else %}
+                                    <div class="no-photo-thumb-small" style="width: 40px; height: 40px; background: #f8f9fa; border-radius: 4px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-user text-muted fa-sm"></i>
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>{{ recent_admission.student_name }}</td>
+                                <td>{{ recent_admission.mobile_number }}</td>
+                                <td><span class="badge bg-info">{{ recent_admission.course }}</span></td>
+                                <td>{{ recent_admission.created_at|date:"d/m/Y" }}</td>
+                                <td>
+                                    {% if recent_admission.is_admitted %}
+                                        <span class="badge bg-success">Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">No</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'search_admission' %}?search={{ recent_admission.admission_id|default:recent_admission.mobile_number }}" 
+                                        class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center">No admissions found</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -1089,6 +1116,14 @@
                 }
                 value = value.replace(/[^A-Z0-9]/g, '');
                 this.value = value;
+            });
+        }
+
+        // Select all checkbox for recent admissions
+        const selectAll = document.getElementById('selectAllRecent');
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                document.querySelectorAll('input[name="selected_admissions"]').forEach(cb => cb.checked = this.checked);
             });
         }
     });

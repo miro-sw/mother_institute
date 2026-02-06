@@ -659,12 +659,12 @@
                 </a>
             </li>
             
-            <!-- Admission (Always visible) -->
+            <!-- Registration (Always visible) -->
             <li class="nav-item">
                 <a class="nav-link {% if 'admission' in request.path %}active{% endif %}" 
                     href="{% url 'admission_form' %}">
                     <i class="nav-icon fas fa-file-alt"></i>
-                    <span>Admission Form</span>
+                    <span>Registration Form</span>
                 </a>
             </li>
             
@@ -865,7 +865,7 @@
                     <h5>Quick Links</h5>
                     <ul class="list-unstyled">
                         <li><a href="{% url 'home' %}" class="text-light"><i class="fas fa-arrow-right"></i> Home</a></li>
-                        <li><a href="{% url 'admission_form' %}" class="text-light"><i class="fas fa-arrow-right"></i> Admission Form</a></li>
+                        <li><a href="{% url 'admission_form' %}" class="text-light"><i class="fas fa-arrow-right"></i> Registration Form</a></li>
                         {% if user.is_authenticated %}
                             <li><a href="{% url 'logout' %}" class="text-light"><i class="fas fa-arrow-right"></i> Logout</a></li>
                         {% else %}

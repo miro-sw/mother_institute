@@ -22,6 +22,7 @@ import io
 import json
 import re
 from datetime import datetime
+from django.utils import timezone
 
 def home(request):
     return render(request, 'institute/index.html')
@@ -124,6 +125,10 @@ def account_section(request):
         total_expenses = Expense.objects.filter(admission=admission).aggregate(Sum('amount'))['amount__sum'] or 0
         total_payments = Payment.objects.filter(admission=admission).aggregate(Sum('amount'))['amount__sum'] or 0
         balance = total_payments - total_expenses
+
+        # Total fee calculation (tms fees + college fees + hostel fees)
+        total_fee = (admission.tms_fees or 0) + (admission.admitted_college_fees or 0) + (admission.hostel_fees or 0)
+        due_amount = total_fee - total_payments
         
         total_payments_sum += total_payments
         total_expenses_sum += total_expenses
@@ -132,7 +137,9 @@ def account_section(request):
             'admission': admission,
             'total_expenses': total_expenses,
             'total_payments': total_payments,
-            'balance': balance
+            'balance': balance,
+            'total_fee': total_fee,
+            'due_amount': due_amount,
         })
     
     net_balance = total_payments_sum - total_expenses_sum
@@ -159,6 +166,10 @@ def student_account(request, admission_id):
     total_expenses = expenses.aggregate(Sum('amount'))['amount__sum'] or 0
     total_payments = payments.aggregate(Sum('amount'))['amount__sum'] or 0
     balance = total_payments - total_expenses
+
+    # Total fee and due amount for this student
+    total_fee = (admission.tms_fees or 0) + (admission.admitted_college_fees or 0) + (admission.hostel_fees or 0)
+    due_amount = total_fee - total_payments
     
     # Expenses by category
     expenses_by_category = expenses.values('category').annotate(
@@ -172,6 +183,8 @@ def student_account(request, admission_id):
         'total_expenses': total_expenses,
         'total_payments': total_payments,
         'balance': balance,
+        'total_fee': total_fee,
+        'due_amount': due_amount,
         'expenses_by_category': expenses_by_category,
     }
     return render(request, 'institute/student_account.html', context)
@@ -810,7 +823,7 @@ def admission_form(request):
             if request.user.is_authenticated:
                 admission.submitted_by = request.user
             admission.save()
-            messages.success(request, f'Admission form submitted successfully! Admission ID: {admission.admission_id}')
+            messages.success(request, f'Registration form submitted successfully! Admission ID: {admission.admission_id}')
             return redirect('admission_form')
     else:
         form = AdmissionForm()
@@ -857,6 +870,29 @@ def search_admission(request):
     
     # Get recent admissions for the table
     recent_admissions = Admission.objects.all().order_by('-created_at')[:10]
+    
+    # Handle bulk admit/unadmit actions (checkboxes from admin)
+    if request.method == 'POST' and request.POST.get('bulk_action') in ['mark_admitted', 'unmark_admitted']:
+        selected_ids = request.POST.getlist('selected_admissions')
+        if selected_ids:
+            for sid in selected_ids:
+                try:
+                    adm = Admission.objects.get(id=sid)
+                    if request.POST.get('bulk_action') == 'mark_admitted':
+                        adm.is_admitted = True
+                        adm.admission_date = timezone.now().date()
+                        adm.admitted_by = request.user
+                    else:
+                        adm.is_admitted = False
+                        adm.admission_date = None
+                        adm.admitted_by = None
+                    adm.save()
+                except Admission.DoesNotExist:
+                    continue
+            messages.success(request, 'Selected admissions updated successfully.')
+        else:
+            messages.warning(request, 'No admissions selected.')
+        return redirect('search_admission')
     
     # Handle POST request (both create and update)
     if request.method == 'POST':
@@ -1143,3 +1179,19 @@ def organization_context(request):
     return {
         'organization': organization,
     }
+
+
+@login_required
+def admissions_list(request):
+    # Admin-only view to list admitted students
+    if request.user.user_type != 'admin':
+        return redirect('home')
+
+    admitted_students = Admission.objects.filter(is_admitted=True).order_by('-admission_date')
+    admitted_count = admitted_students.count()
+
+    context = {
+        'admitted_students': admitted_students,
+        'admitted_count': admitted_count,
+    }
+    return render(request, 'institute/admissions_list.html', context)

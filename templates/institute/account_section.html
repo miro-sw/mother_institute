@@ -64,6 +64,8 @@
                             <th>Admission ID</th>
                             <th>Student Name</th>
                             <th>Course</th>
+                            <th>Total Fee</th>
+                            <th>Due Amount</th>
                             <th>Total Expenses</th>
                             <th>Total Payments</th>
                             <th>Balance</th>
@@ -83,6 +85,8 @@
                                 <small class="text-muted">{{ data.admission.mobile_number }}</small>
                             </td>
                             <td>{{ data.admission.course }}</td>
+                            <td class="text-primary">₹{{ data.total_fee|default:0 }}</td>
+                            <td class="text-danger">₹{{ data.due_amount|default:0 }}</td>
                             <td class="text-danger">₹{{ data.total_expenses }}</td>
                             <td class="text-success">₹{{ data.total_payments }}</td>
                             <td>
