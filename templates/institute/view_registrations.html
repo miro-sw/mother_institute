@@ -1,0 +1,495 @@
+{% extends 'institute/base.html' %}
+
+{% block content %}
+<div class="content-card">
+    <h1 class="mb-4" style="color: #1e3a8a;">
+        <i class="fas fa-users me-2"></i>View Registrations
+    </h1>
+    
+    <!-- Search Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-10">
+                    <input type="text" 
+                            class="form-control" 
+                            name="search" 
+                            value="{{ search_query }}" 
+                            placeholder="Search by name, mobile, admission ID...">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Registrations Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Admission ID</th>
+                            <th>Student Name</th>
+                            <th>Father's Name</th>
+                            <th>Mobile</th>
+                            <th>Course</th>
+                            <th>Applied Date</th>
+                            <th>Admitted</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for admission in admissions %}
+                        <tr>
+                            <td><span class="badge bg-primary">{{ admission.admission_id|default:"-" }}</span></td>
+                            <td>{{ admission.student_name }}</td>
+                            <td>{{ admission.father_name }}</td>
+                            <td>{{ admission.mobile_number }}</td>
+                            <td>{{ admission.course }}</td>
+                            <td>{{ admission.created_at|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if admission.is_admitted %}
+                                    <span class="badge bg-success">Yes</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <!-- View Details Button (Eye Icon) -->
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-info me-1 view-details-btn" 
+                                        data-admission-id="{{ admission.id }}">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                
+                                <!-- Edit Button - Fixed URL -->
+                                <a href="{% url 'search_admission' %}?search={{ admission.admission_id|default:admission.mobile_number }}" 
+                                    class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">No registrations found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if admissions.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    {% if admissions.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ admissions.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in admissions.paginator.page_range %}
+                        {% if admissions.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if admissions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ admissions.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Single Modal Template (Will be populated via AJAX) -->
+<div class="modal fade" id="viewModal" tabindex="-1" aria-labelledby="viewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color: #1e3a8a; color: white;">
+                <h5 class="modal-title" id="viewModalLabel">
+                    <i class="fas fa-user-graduate me-2"></i>Student Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be loaded here via AJAX -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Loading student details...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Close
+                </button>
+                <a href="#" class="btn btn-primary" id="editAdmissionBtn">
+                    <i class="fas fa-edit me-1"></i> Edit Admission
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-header {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    }
+    
+    .modal-content {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .btn-outline-info {
+        border-color: #0dcaf0;
+        color: #0dcaf0;
+    }
+    
+    .btn-outline-info:hover {
+        background-color: #0dcaf0;
+        color: white;
+    }
+    
+    .badge {
+        font-size: 0.85em;
+        padding: 0.35em 0.65em;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        color: #1e3a8a;
+        font-weight: 600;
+    }
+    
+    h6 {
+        color: #1e3a8a;
+        font-weight: 600;
+    }
+    
+    .border-bottom {
+        border-color: #3b82f6 !important;
+    }
+    
+    /* Ensure modal doesn't flicker */
+    .modal {
+        z-index: 1060;
+    }
+    
+    .modal-backdrop {
+        z-index: 1050;
+    }
+    
+    .detail-row {
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #1e3a8a;
+        min-width: 180px;
+    }
+    
+    .detail-value {
+        color: #333;
+    }
+</style>
+
+<!-- view_registrations.html - FIXED AJAX CALL -->
+
+<!-- ... keep the existing code until the script section ... -->
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle view details button clicks
+        const viewButtons = document.querySelectorAll('.view-details-btn');
+        const viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
+        const modalBody = document.getElementById('modalBody');
+        const editAdmissionBtn = document.getElementById('editAdmissionBtn');
+        
+        viewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const admissionId = this.getAttribute('data-admission-id');
+                
+                // Load student details via AJAX
+                loadStudentDetails(admissionId);
+                
+                // Show the modal
+                viewModal.show();
+            });
+        });
+        
+        function loadStudentDetails(admissionId) {
+            // Show loading spinner
+            modalBody.innerHTML = `
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-3">Loading student details...</p>
+                </div>
+            `;
+            
+            // Fetch student details via AJAX
+            fetch(`/api/get-complete-admission-details/${admissionId}/`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        displayCompleteDetails(data.admission);
+                    } else {
+                        modalBody.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Error loading student details: ${data.error}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading student details. Please try again.
+                        </div>
+                    `;
+                });
+        }
+        
+        function displayCompleteDetails(admission) {
+            // Format date of birth
+            let dobDisplay = 'Not provided';
+            if (admission.date_of_birth) {
+                const dob = new Date(admission.date_of_birth);
+                dobDisplay = dob.toLocaleDateString('en-GB');
+            }
+            
+            // Format dates
+            const appliedDate = new Date(admission.created_at).toLocaleDateString('en-GB');
+            
+            // Create comprehensive modal content
+            const modalContent = `
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <h5 class="text-center mb-4" style="color: #1e3a8a;">
+                            THE MOTHER INSTITUTE OF SCIENCE<br>
+                            <small class="text-muted">Excellence in Science Education</small>
+                        </h5>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h6 class="border-bottom pb-2 mb-3" style="color: #1e3a8a;">
+                            <i class="fas fa-user-circle me-2"></i>Personal Information
+                        </h6>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Admission ID:</div>
+                            <div class="col-8 detail-value">${admission.admission_id || 'Not assigned'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Student Name:</div>
+                            <div class="col-8 detail-value">${admission.student_name || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Father's Name:</div>
+                            <div class="col-8 detail-value">${admission.father_name || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Mother's Name:</div>
+                            <div class="col-8 detail-value">${admission.mother_name || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Date of Birth:</div>
+                            <div class="col-8 detail-value">${dobDisplay}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Mobile Number:</div>
+                            <div class="col-8 detail-value">${admission.mobile_number || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">WhatsApp Number:</div>
+                            <div class="col-8 detail-value">${admission.whatsapp_number || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Blood Group:</div>
+                            <div class="col-8 detail-value">${admission.blood_group || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Category:</div>
+                            <div class="col-8 detail-value">${admission.category || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Aadhaar Number:</div>
+                            <div class="col-8 detail-value">${admission.adhaar_number || 'Not provided'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h6 class="border-bottom pb-2 mb-3" style="color: #1e3a8a;">
+                            <i class="fas fa-graduation-cap me-2"></i>Academic Information
+                        </h6>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Course:</div>
+                            <div class="col-8 detail-value">${admission.course || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">College Name:</div>
+                            <div class="col-8 detail-value">${admission.college_name || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Board Name:</div>
+                            <div class="col-8 detail-value">${admission.board_name || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">College Roll No:</div>
+                            <div class="col-8 detail-value">${admission.college_roll_no || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Batch:</div>
+                            <div class="col-8 detail-value">${admission.batch || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">11th Year:</div>
+                            <div class="col-8 detail-value">${admission.eleventh_year || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">12th Year:</div>
+                            <div class="col-8 detail-value">${admission.twelfth_year || 'Not provided'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h6 class="border-bottom pb-2 mb-3" style="color: #1e3a8a;">
+                            <i class="fas fa-file-alt me-2"></i>Enrollment Details
+                        </h6>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Enrolled For:</div>
+                            <div class="col-8 detail-value">${admission.enrolled_for || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">SAMS Login ID:</div>
+                            <div class="col-8 detail-value">${admission.sams_login_id || 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">SAMS Password:</div>
+                            <div class="col-8 detail-value">${admission.sams_password ? '••••••••' : 'Not provided'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">APAAR ID:</div>
+                            <div class="col-8 detail-value">${admission.apaar_id || 'Not provided'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h6 class="border-bottom pb-2 mb-3" style="color: #1e3a8a;">
+                            <i class="fas fa-money-bill-wave me-2"></i>Fees Details
+                        </h6>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Hostel Fees:</div>
+                            <div class="col-8 detail-value">₹${admission.hostel_fees || '0.00'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">TMS Fees:</div>
+                            <div class="col-8 detail-value">₹${admission.tms_fees || '0.00'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">College Fees:</div>
+                            <div class="col-8 detail-value">₹${admission.admitted_college_fees || '0.00'}</div>
+                        </div>
+                        <div class="row detail-row">
+                            <div class="col-4 detail-label">Transportation:</div>
+                            <div class="col-8 detail-value">${admission.college_transportation || 'Not provided'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h6 class="border-bottom pb-2 mb-3" style="color: #1e3a8a;">
+                            <i class="fas fa-home me-2"></i>Address
+                        </h6>
+                        <div class="row">
+                            <div class="col-12">
+                                <p>${admission.address || 'Not provided'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Applied Date and Status -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Applied Date:</strong> ${appliedDate}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Admitted Status:</strong> 
+                                    <span class="badge bg-${admission.is_admitted ? 'success' : 'secondary'}">
+                                        ${admission.is_admitted ? 'Yes' : 'No'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-12">
+                                    <strong>Database ID:</strong> ${admission.id}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modalBody.innerHTML = modalContent;
+            
+            // Set edit button URL to go to search_admission page with the admission
+            editAdmissionBtn.href = `/search-admission/?admission_id=${admission.id}`;
+        }
+        
+        // Initialize Bootstrap tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

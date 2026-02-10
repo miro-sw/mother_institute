@@ -19,13 +19,24 @@ urlpatterns = [
     path('student-account/<int:admission_id>/', views.student_account, name='student_account'),
     path('account-search/', views.account_search_view, name='account_search'),
     path('add-expense/<int:admission_id>/', views.add_expense, name='add_expense'),
+    path('add-expense/', views.add_expense_general, name='add_expense_general'),
     path('add-payment/<int:admission_id>/', views.add_payment, name='add_payment'),
+    path('add-payment/', views.add_payment_general, name='add_payment_general'),
     path('edit-expense/<int:expense_id>/', views.edit_expense, name='edit_expense'),
     path('edit-payment/<int:payment_id>/', views.edit_payment, name='edit_payment'),
     path('delete-expense/<int:expense_id>/', views.delete_expense, name='delete_expense'),
     path('delete-payment/<int:payment_id>/', views.delete_payment, name='delete_payment'),
     path('generate-receipt/<int:payment_id>/', views.generate_receipt, name='generate_receipt'),
     path('account-report/<int:admission_id>/', views.account_report, name='account_report'),
+    # API endpoints
+    path('api/get-student-details/', views.get_student_details, name='get_student_details'),
     # Organization Settings URL
     path('organization-settings/', views.organization_settings, name='organization_settings'),
+    path('api/search-students/', views.search_students, name='search_students'),
+    path('api/get-student-details/<int:student_id>/', views.get_student_details_by_id, name='get_student_details_by_id'),
+    # Add this to urls.py
+    path('view-registrations/', views.view_registrations, name='view_registrations'),
+    # Add to urls.py
+    path('api/get-complete-admission-details/<int:student_id>/', views.get_complete_admission_details, name='get_complete_admission_details'),
+    path('create-installments/', views.create_installments, name='create_installments'),
 ]

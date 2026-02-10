@@ -579,6 +579,74 @@
             font-family: monospace;
             margin-top: 5px;
         }
+
+        /* Submenu Styles */
+        .nav-item.has-submenu {
+            position: relative;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .submenu-toggle {
+            background: none;
+            border: none;
+            color: inherit;
+            padding: 0;
+            cursor: pointer;
+            font-size: 0.6rem;
+            transition: transform 0.3s ease;
+            margin-left: 8px;
+        }
+
+        .nav-item.has-submenu .nav-link:hover .submenu-toggle {
+            transform: rotate(180deg);
+        }
+
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-item.has-submenu.open .submenu {
+            max-height: 500px;
+            padding-top: 10px;
+        }
+
+        .submenu .nav-item {
+            margin-bottom: 3px;
+        }
+
+        .submenu .nav-link {
+            padding: 10px 15px 10px 40px;
+            font-size: 0.95rem;
+            font-weight: 400;
+            border-radius: 6px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .submenu .nav-link:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .submenu .nav-link.active {
+            background: rgba(255, 255, 255, 0.25);
+            color: white;
+        }
+
+        .submenu .nav-link.active::before {
+            left: 20px;
+        }
     </style>
 </head>
 <body>
@@ -650,7 +718,8 @@
         </div>
         
         <ul class="nav-menu">
-            <!-- Home - FIXED: Only active when exactly on home page -->
+            <!-- Home (visible only for non-admin users) -->
+            {% if not user.is_authenticated or user.user_type != 'admin' %}
             <li class="nav-item">
                 <a class="nav-link {% if request.path == '/' %}active{% endif %}" 
                     href="{% url 'home' %}">
@@ -658,19 +727,10 @@
                     <span>Home</span>
                 </a>
             </li>
+            {% endif %}
             
-            <!-- Registration (Always visible) -->
-            <li class="nav-item">
-                <a class="nav-link {% if 'admission' in request.path %}active{% endif %}" 
-                    href="{% url 'admission_form' %}">
-                    <i class="nav-icon fas fa-file-alt"></i>
-                    <span>Registration Form</span>
-                </a>
-            </li>
-            
-            {% if user.is_authenticated %}
-                <!-- Admin Dashboard (Only for admin users) -->
-                {% if user.user_type == 'admin' %}
+            {% if user.is_authenticated and user.user_type == 'admin' %}
+                <!-- Dashboard (Only for admin users) -->
                 <li class="nav-item">
                     <a class="nav-link {% if 'dashboard' in request.path %}active{% endif %}" 
                         href="{% url 'admin_dashboard' %}">
@@ -679,53 +739,130 @@
                     </a>
                 </li>
                 
-                <!-- Manage Users (Only for admin users) -->
+                <!-- Organization (Only for admin users) -->
+                <li class="nav-item">
+                    <a class="nav-link {% if 'organization-settings' in request.path %}active{% endif %}" 
+                        href="{% url 'organization_settings' %}">
+                        <i class="nav-icon fas fa-building"></i>
+                        <span>Organization</span>
+                    </a>
+                </li>
+                
+                <!-- Users (Only for admin users) -->
                 <li class="nav-item">
                     <a class="nav-link {% if 'manage' in request.path %}active{% endif %}" 
                         href="{% url 'manage_users' %}">
                         <i class="nav-icon fas fa-users-cog"></i>
-                        <span>Manage Users</span>
+                        <span>Users</span>
                     </a>
                 </li>
                 
-                <!-- Organization Settings (Only for admin users) -->
-                <li class="nav-item">
-                    <a class="nav-link {% if 'organization-settings' in request.path %}active{% endif %}" 
-                        href="{% url 'organization_settings' %}">
-                        <i class="nav-icon fas fa-cog"></i>
-                        <span>Organization Settings</span>
+                <!-- Registration Menu with Submenu -->
+                <li class="nav-item has-submenu {% if 'admission' in request.path or 'search-admission' in request.path %}open{% endif %}">
+                    <a class="nav-link" href="javascript:void(0);">
+                        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                            <i class="nav-icon fas fa-file-alt"></i>
+                            <span>Registration</span>
+                        </div>
+                        <i class="fas fa-chevron-down submenu-toggle"></i>
                     </a>
+                    <ul class="submenu">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.path == '/admission-form/' %}active{% endif %}" 
+                                href="{% url 'admission_form' %}">
+                                <i class="nav-icon fas fa-edit"></i>
+                                <span>Register</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'search-admission' in request.path %}active{% endif %}" 
+                                href="{% url 'search_admission' %}">
+                                <i class="nav-icon fas fa-check-square"></i>
+                                <span>Admission</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'view-registrations' in request.path %}active{% endif %}" 
+                                href="{% url 'view_registrations' %}">
+                                <i class="nav-icon fas fa-search"></i>
+                                <span>View Registration</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'admissions-list' in request.path %}active{% endif %}" 
+                                href="{% url 'admissions_list' %}">
+                                <i class="nav-icon fas fa-list"></i>
+                                <span>View Admission</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 
-                {% if user.user_type == 'admin' %}
-                <!-- Search Admission (Only for admin users) -->
-                <li class="nav-item">
-                    <a class="nav-link {% if 'search-admission' in request.path %}active{% endif %}" 
-                    href="{% url 'search_admission' %}">
-                        <i class="nav-icon fas fa-search"></i>
-                        <span>Search Admission</span>
+                <!-- Accounts Menu with Submenu -->
+                <li class="nav-item has-submenu {% if 'account' in request.path %}open{% endif %}">
+                    <a class="nav-link" href="javascript:void(0);">
+                        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                            <i class="nav-icon fas fa-wallet"></i>
+                            <span>Accounts</span>
+                        </div>
+                        <i class="fas fa-chevron-down submenu-toggle"></i>
                     </a>
+                    <ul class="submenu">
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'create-installments' in request.path %}active{% endif %}" 
+                                href="{% url 'create_installments' %}">
+                                <i class="nav-icon fas fa-plus-square"></i>
+                                <span>Create Installments</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'add-expense' in request.path or 'edit-expense' in request.path %}active{% endif %}" 
+                                href="{% url 'add_expense_general' %}">
+                                <i class="nav-icon fas fa-minus-circle"></i>
+                                <span>Expenses</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'add-payment' in request.path or 'edit-payment' in request.path %}active{% endif %}" 
+                                href="{% url 'add_payment_general' %}">
+                                <i class="nav-icon fas fa-credit-card"></i>
+                                <span>Payment</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'account-section' in request.path %}active{% endif %}" 
+                                href="{% url 'account_section' %}">
+                                <i class="nav-icon fas fa-chart-line"></i>
+                                <span>Balance Sheet</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'account-search' in request.path %}active{% endif %}" 
+                                href="{% url 'account_search' %}">
+                                <i class="nav-icon fas fa-search-dollar"></i>
+                                <span>View Accounts</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'account' in request.path %}active{% endif %}" 
-                        href="{% url 'account_section' %}">
-                        <i class="nav-icon fas fa-wallet"></i>
-                        <span>Account Section</span>
-                    </a>
-                </li>
-                {% endif %}
-                {% if user.user_type == 'admin' %}
-                <li class="nav-item">
-                    <a class="nav-link {% if 'account-search' in request.path %}active{% endif %}" 
-                        href="{% url 'account_search' %}">
-                        <i class="nav-icon fas fa-search-dollar"></i>
-                        <span>Advanced Account Search</span>
-                    </a>
-                </li>
-                {% endif %}
-                {% endif %}
                 
-                <!-- Additional menu items for logged-in users -->
+                <!-- Additional menu items for logged-in admin users -->
+                <li class="nav-item">
+                    <a class="nav-link {% if 'profile' in request.path %}active{% endif %}" 
+                        href="#">
+                        <i class="nav-icon fas fa-user-circle"></i>
+                        <span>My Profile</span>
+                    </a>
+                </li>
+            {% elif user.is_authenticated %}
+                <!-- For authenticated non-admin users -->
+                <li class="nav-item">
+                    <a class="nav-link {% if 'admission' in request.path %}active{% endif %}" 
+                        href="{% url 'admission_form' %}">
+                        <i class="nav-icon fas fa-file-alt"></i>
+                        <span>Registration</span>
+                    </a>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link {% if 'profile' in request.path %}active{% endif %}" 
                         href="#">
@@ -736,20 +873,19 @@
             {% else %}
                 <!-- For non-logged in users -->
                 <li class="nav-item">
+                    <a class="nav-link {% if 'admission' in request.path %}active{% endif %}" 
+                        href="{% url 'admission_form' %}">
+                        <i class="nav-icon fas fa-file-alt"></i>
+                        <span>Registration</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link {% if 'login' in request.path %}active{% endif %}" 
                         href="{% url 'login' %}">
                         <i class="nav-icon fas fa-sign-in-alt"></i>
                         <span>Login</span>
                     </a>
                 </li>
-                
-                {% comment %} <li class="nav-item">
-                    <a class="nav-link {% if 'register' in request.path %}active{% endif %}" 
-                        href="{% url 'register' %}">
-                        <i class="nav-icon fas fa-user-plus"></i>
-                        <span>Register</span>
-                    </a>
-                </li> {% endcomment %}
             {% endif %}
             
             <!-- Additional Links -->
@@ -924,13 +1060,30 @@
             }
         });
         
+        // Submenu toggle functionality
+        const submenuItems = document.querySelectorAll('.nav-item.has-submenu > .nav-link');
+        submenuItems.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const parentItem = this.parentElement;
+                parentItem.classList.toggle('open');
+                
+                // Close other submenus
+                document.querySelectorAll('.nav-item.has-submenu').forEach(item => {
+                    if (item !== parentItem) {
+                        item.classList.remove('open');
+                    }
+                });
+            });
+        });
+        
         // FIXED: Improved active link detection
         const currentPath = window.location.pathname;
         const navLinks = document.querySelectorAll('.nav-link');
         
         navLinks.forEach(link => {
             const href = link.getAttribute('href');
-            if (href) {
+            if (href && href !== 'javascript:void(0);') {
                 // Get the clean URL path
                 const hrefPath = href.replace(/^\//, '');
                 const currentPathClean = currentPath.replace(/^\//, '');
@@ -949,10 +1102,12 @@
         // Auto-close sidebar on link click for mobile
         if (window.innerWidth <= 768) {
             navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    sidebar.classList.remove('show');
-                    sidebarOverlay.classList.remove('show');
-                });
+                if (link.getAttribute('href') && link.getAttribute('href') !== 'javascript:void(0);') {
+                    link.addEventListener('click', function() {
+                        sidebar.classList.remove('show');
+                        sidebarOverlay.classList.remove('show');
+                    });
+                }
             });
         }
     });
