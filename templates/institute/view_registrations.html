@@ -53,11 +53,17 @@
                             <td>{{ admission.course }}</td>
                             <td>{{ admission.created_at|date:"d/m/Y" }}</td>
                             <td>
-                                {% if admission.is_admitted %}
-                                    <span class="badge bg-success">Yes</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">No</span>
-                                {% endif %}
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input admit-checkbox" type="checkbox" role="switch"
+                                        data-admission-id="{{ admission.id }}" {% if admission.is_admitted %}checked{% endif %}>
+                                    <span class="admit-badge">
+                                        {% if admission.is_admitted %}
+                                            <span class="badge bg-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">No</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
                             </td>
                             <td>
                                 <!-- View Details Button (Eye Icon) -->
@@ -485,6 +491,68 @@
             editAdmissionBtn.href = `/search-admission/?admission_id=${admission.id}`;
         }
         
+            // CSRF helper
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Handle admit checkbox toggles
+        const admitCheckboxes = document.querySelectorAll('.admit-checkbox');
+        admitCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function(e) {
+                const admissionId = this.getAttribute('data-admission-id');
+                const isChecked = this.checked;
+                const csrftoken = getCookie('csrftoken');
+
+                fetch(`/toggle-admit/${admissionId}/`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ 'is_admitted': isChecked })
+                })
+                .then(resp => {
+                    if (!resp.ok) {
+                        // Attempt to read JSON error, otherwise text
+                        return resp.text().then(txt => { throw new Error(txt || ('HTTP ' + resp.status)); });
+                    }
+                    return resp.json();
+                })
+                .then(data => {
+                    if (data && data.success) {
+                        const badgeSpan = cb.closest('td').querySelector('.admit-badge');
+                        if (data.is_admitted) {
+                            badgeSpan.innerHTML = '<span class="badge bg-success">Yes</span>';
+                        } else {
+                            badgeSpan.innerHTML = '<span class="badge bg-secondary">No</span>';
+                        }
+                    } else {
+                        alert('Error: ' + (data && data.error ? data.error : 'Could not update status'));
+                        cb.checked = !isChecked; // revert
+                    }
+                })
+                .catch(err => {
+                    console.error('Admit toggle error:', err);
+                    alert('Error updating admitted status: ' + (err.message || err));
+                    cb.checked = !isChecked; // revert
+                });
+            });
+        });
+
         // Initialize Bootstrap tooltips
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {

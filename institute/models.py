@@ -193,7 +193,7 @@ class Payment(models.Model):
         return f"{self.admission.admission_id} - ₹{self.amount} - {self.payment_type}"
     
 class Organization(models.Model):
-    name = models.CharField(max_length=200, unique=True, verbose_name="Organization Name")
+    name = models.CharField(max_length=200, unique=True, verbose_name="Organization Name") 
     logo = models.ImageField(upload_to='organization_logos/', null=True, blank=True, verbose_name="Logo")
     address = models.TextField(verbose_name="Address")
     mobile = models.CharField(max_length=15, verbose_name="Mobile Number")

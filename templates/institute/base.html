@@ -808,13 +808,7 @@
                         <i class="fas fa-chevron-down submenu-toggle"></i>
                     </a>
                     <ul class="submenu">
-                        <li class="nav-item">
-                            <a class="nav-link {% if 'create-installments' in request.path %}active{% endif %}" 
-                                href="{% url 'create_installments' %}">
-                                <i class="nav-icon fas fa-plus-square"></i>
-                                <span>Create Installments</span>
-                            </a>
-                        </li>
+                        <!-- Create Installments removed -->
                         <li class="nav-item">
                             <a class="nav-link {% if 'add-expense' in request.path or 'edit-expense' in request.path %}active{% endif %}" 
                                 href="{% url 'add_expense_general' %}">

@@ -24,6 +24,52 @@ import re
 from datetime import datetime
 from django.utils import timezone
 
+
+@login_required
+def toggle_admit(request, admission_id):
+    """Toggle or set admission.is_admitted via AJAX POST.
+    Expects JSON body: { "is_admitted": true/false } or will toggle if missing.
+    Returns JSON errors (no redirects) so client can handle them.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
+
+    # Permission: allow admin user_type or staff flag
+    user = request.user
+    if not (getattr(user, 'user_type', None) == 'admin' or getattr(user, 'is_staff', False)):
+        return JsonResponse({'success': False, 'error': 'Permission denied'}, status=403)
+
+    try:
+        admission = get_object_or_404(Admission, id=admission_id)
+
+        # parse JSON body
+        try:
+            payload = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except Exception:
+            payload = {}
+
+        # determine desired state
+        if 'is_admitted' in payload:
+            desired = bool(payload.get('is_admitted'))
+        else:
+            desired = not admission.is_admitted
+
+        admission.is_admitted = desired
+        if desired:
+            admission.admitted_by = request.user
+            # set admission_date if not already
+            if not admission.admission_date:
+                admission.admission_date = timezone.now().date()
+        else:
+            admission.admitted_by = None
+            admission.admission_date = None
+
+        admission.save()
+
+        return JsonResponse({'success': True, 'is_admitted': admission.is_admitted, 'admission_id': admission.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
 def home(request):
     return render(request, 'institute/index.html')
 
@@ -1474,27 +1520,4 @@ def get_complete_admission_details(request, student_id):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
     
-    # ADD to views.py - Create Installments View
-@login_required
-def create_installments(request):
-    """View for creating student installments"""
-    if request.user.user_type != 'admin':
-        return redirect('home')
-    
-    if request.method == 'POST':
-        # Handle installment creation logic here
-        student_id = request.POST.get('student_id')
-        installment_data = request.POST.get('installment_data')
-        
-        # Add your installment creation logic here
-        messages.success(request, 'Installments created successfully!')
-        return redirect('create_installments')
-    
-    # Get all students for selection
-    students = Admission.objects.all().order_by('student_name')
-    
-    context = {
-        'students': students,
-        'title': 'Create Installments'
-    }
-    return render(request, 'institute/create_installments.html', context)
+    # Create Installments view removed

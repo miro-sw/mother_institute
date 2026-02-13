@@ -38,5 +38,5 @@ urlpatterns = [
     path('view-registrations/', views.view_registrations, name='view_registrations'),
     # Add to urls.py
     path('api/get-complete-admission-details/<int:student_id>/', views.get_complete_admission_details, name='get_complete_admission_details'),
-    path('create-installments/', views.create_installments, name='create_installments'),
+    path('toggle-admit/<int:admission_id>/', views.toggle_admit, name='toggle_admit'),
 ]
