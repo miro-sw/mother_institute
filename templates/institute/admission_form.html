@@ -311,7 +311,7 @@ function showPreview() {
     if (imageInput.files && imageInput.files[0]) {
         const file = imageInput.files[0];
         const reader = new FileReader();
-        
+
         reader.onload = function(e) {
             modalImageContainer.innerHTML = `<img src="${e.target.result}" class="img-fluid rounded" alt="Student Photo Preview" style="max-height: 70vh;">`;
             modalNoImage.classList.add('d-none');
