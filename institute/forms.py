@@ -40,6 +40,29 @@ class AdmissionForm(forms.ModelForm):
             'student_image': forms.FileInput(attrs={'accept': 'image/*'}),
             'admission_id': forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control-plaintext'}),
         }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add help text for student_image field
+        self.fields['student_image'].help_text = 'Accepted formats: JPG, PNG, GIF (Max 5MB)'
+        self.fields['student_image'].required = False
+        
+        # Mark optional fields as not required
+        optional_fields = [
+            'enrolled_for', 'hostel_fees', 'admitted_college_fees',
+            'installment1', 'installment2', 'installment3', 
+            'installment4', 'installment5', 'installment6',
+            'tms_fees', 'sams_login_id', 'sams_password',
+            'pen_number', 'apaar_id', 'college_dress', 'books',
+            'college_transportation', 'tms_dress', 'academics_accommodation',
+            'visitor1_name', 'visitor1_relation', 'visitor1_contact',
+            'visitor2_name', 'visitor2_relation', 'visitor2_contact',
+            'guardian_signature', 'student_signature', 'tms_signature'
+        ]
+        
+        for field_name in optional_fields:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
         
         
 class ExpenseForm(forms.ModelForm):

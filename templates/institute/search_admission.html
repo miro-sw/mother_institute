@@ -53,6 +53,17 @@
             <form method="POST" enctype="multipart/form-data" id="editAdmissionForm">
                 {% csrf_token %}
                 
+                <!-- Display form non-field errors -->
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Form Errors:</strong>
+                    {% for error in form.non_field_errors %}
+                        <div>{{ error }}</div>
+                    {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+                
                 <!-- Hidden field for admission ID -->
                 <input type="hidden" name="admission_id" value="{{ admission.id }}">
                 
@@ -101,6 +112,15 @@
                                             accept="image/*">
                                 </div>
                                 
+                                <!-- Display student_image field errors if any -->
+                                {% if form.student_image.errors %}
+                                <div class="alert alert-danger alert-sm mt-2" role="alert">
+                                    {% for error in form.student_image.errors %}
+                                        <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
                                 <!-- File Info -->
                                 <div id="fileInfo" class="mt-2 small text-muted" style="display: none;">
                                     <i class="fas fa-file-image"></i> <span id="fileName"></span>
@@ -114,12 +134,21 @@
                     <div class="col-md-9">
                         <div class="row">
                             <div class="col-md-4">
+                                {% if form.student_name.errors %}
+                                    <div class="alert alert-danger py-1 px-2 small mb-2">{{ form.student_name.errors.0 }}</div>
+                                {% endif %}
                                 {{ form.student_name|as_crispy_field }}
                             </div>
                             <div class="col-md-4">
+                                {% if form.father_name.errors %}
+                                    <div class="alert alert-danger py-1 px-2 small mb-2">{{ form.father_name.errors.0 }}</div>
+                                {% endif %}
                                 {{ form.father_name|as_crispy_field }}
                             </div>
                             <div class="col-md-4">
+                                {% if form.mother_name.errors %}
+                                    <div class="alert alert-danger py-1 px-2 small mb-2">{{ form.mother_name.errors.0 }}</div>
+                                {% endif %}
                                 {{ form.mother_name|as_crispy_field }}
                             </div>
                             <div class="col-md-4">
@@ -245,5 +274,48 @@
 
 <!-- Include the same modal and JavaScript from admission_form.html for image handling -->
 <!-- ... copy the modal and JavaScript from admission_form.html ... -->
+
+<script>
+// Handle student image upload
+document.addEventListener('DOMContentLoaded', function() {
+    const studentImageInput = document.getElementById('student_image_upload');
+    if (studentImageInput) {
+        studentImageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    alert('Invalid file type. Please upload JPG, PNG, GIF, or WebP image.');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Validate file size (5MB)
+                const maxSize = 5 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    alert('File size exceeds 5MB limit. Please upload a smaller image.');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Show file info
+                const fileInfo = document.getElementById('fileInfo');
+                const fileName = document.getElementById('fileName');
+                fileName.textContent = file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
+                fileInfo.style.display = 'block';
+                
+                // Show image preview
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const imageDisplayContainer = document.getElementById('imageDisplayContainer');
+                    imageDisplayContainer.innerHTML = '<img src="' + event.target.result + '" alt="Student Photo" class="img-fluid rounded" style="max-height: 150px; object-fit: cover;">';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
 
 {% endblock %}

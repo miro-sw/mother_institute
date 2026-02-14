@@ -3,6 +3,7 @@
 from django.shortcuts import render, redirect, get_object_or_404 
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 from django.http import JsonResponse
@@ -1097,17 +1098,39 @@ def search_admission(request):
             # UPDATE EXISTING ADMISSION
             try:
                 admission = get_object_or_404(Admission, id=admission_id)
+                # Store the original admission_id to protect it from being changed
+                original_admission_id = admission.admission_id
+                
                 form = AdmissionForm(request.POST, request.FILES, instance=admission)
                 
                 if form.is_valid():
                     admission = form.save(commit=False)
+                    # Restore the original admission_id if it was somehow modified
+                    admission.admission_id = original_admission_id
                     admission.submitted_by = request.user
                     admission.save()
                     
                     messages.success(request, f'Admission {admission.admission_id} for {admission.student_name} updated successfully!')
                     return redirect('search_admission')
                 else:
-                    messages.error(request, 'Please correct the errors in the form.')
+                    # Form has errors - display them
+                    error_messages = []
+                    for field, errors in form.errors.items():
+                        if field == '__all__':
+                            for error in errors:
+                                error_messages.append(f"Form Error: {error}")
+                        else:
+                            for error in errors:
+                                error_messages.append(f"{field}: {error}")
+                    
+                    if error_messages:
+                        for msg in error_messages:
+                            messages.error(request, msg)
+                    else:
+                        messages.error(request, 'Please correct the errors in the form.')
+                    
+                    # Don't redirect - re-render with form errors visible
+                    edit_mode = True
                     
             except Exception as e:
                 messages.error(request, f'Error updating admission: {str(e)}')
@@ -1125,7 +1148,24 @@ def search_admission(request):
                     messages.success(request, f'New admission created successfully! Admission ID: {admission.admission_id}')
                     return redirect('search_admission')
                 else:
-                    messages.error(request, 'Please correct the errors in the form.')
+                    # Form has errors - display them
+                    error_messages = []
+                    for field, errors in form.errors.items():
+                        if field == '__all__':
+                            for error in errors:
+                                error_messages.append(f"Form Error: {error}")
+                        else:
+                            for error in errors:
+                                error_messages.append(f"{field}: {error}")
+                    
+                    if error_messages:
+                        for msg in error_messages:
+                            messages.error(request, msg)
+                    else:
+                        messages.error(request, 'Please correct the errors in the form.')
+                    
+                    # Don't redirect - re-render with form errors visible
+                    edit_mode = False
                     
             except Exception as e:
                 messages.error(request, f'Error creating admission: {str(e)}')
@@ -1275,6 +1315,45 @@ def search_students(request):
     
     return JsonResponse({'results': results})
 
+@require_POST
+@login_required
+def delete_registration(request, admission_id):
+    """
+    Delete a registration only if the student is not admitted
+    """
+    try:
+        admission = Admission.objects.get(id=admission_id)
+        
+        # Check if student is admitted
+        if admission.is_admitted:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cannot delete admitted students'
+            }, status=400)
+        
+        # Store student name for response message
+        student_name = admission.student_name
+        
+        # Delete the registration
+        admission.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Registration for {student_name} has been deleted successfully'
+        })
+        
+    except Admission.DoesNotExist:
+        return JsonResponse({
+            'success': False, 
+            'error': 'Registration not found'
+        }, status=404)
+    except Exception as e:
+        return JsonResponse({
+            'success': False, 
+            'error': str(e)
+        }, status=500)
+        
+        
 @login_required
 def get_student_details_by_id(request, student_id):
     """API endpoint to get student details by ID"""

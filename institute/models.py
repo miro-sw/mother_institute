@@ -55,7 +55,7 @@ class Admission(models.Model):
     course = models.CharField(max_length=100)
     
     # Enrollment
-    enrolled_for = models.CharField(max_length=100)
+    enrolled_for = models.CharField(max_length=100, blank=True, null=True)
     sams_login_id = models.CharField(max_length=100, blank=True)
     sams_password = models.CharField(max_length=100, blank=True)
     pen_number = models.CharField(max_length=100, blank=True)
@@ -70,23 +70,23 @@ class Admission(models.Model):
     visitor2_contact = models.CharField(max_length=15, blank=True)
     
     # Fees and facilities
-    hostel_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    hostel_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     academics_accommodation = models.TextField(blank=True)
-    admitted_college_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    admitted_college_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     college_dress = models.CharField(max_length=100, blank=True)
     books = models.CharField(max_length=100, blank=True)
     college_transportation = models.CharField(max_length=100, blank=True)
     tms_dress = models.CharField(max_length=100, blank=True)
     
     # Installments
-    installment1 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    installment2 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    installment3 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    installment4 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    installment5 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    installment6 = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    installment1 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    installment2 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    installment3 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    installment4 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    installment5 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
+    installment6 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     
-    tms_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    tms_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     
     # Signatures (in real app, these would be FileFields)
     guardian_signature = models.CharField(max_length=100, blank=True)
@@ -102,9 +102,9 @@ class Admission(models.Model):
     admitted_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True, related_name='admitted_students')
     
     def save(self, *args, **kwargs):
-        # Generate custom admission ID if not already set
-        if not self.admission_id:
-            # Get the last admission to determine next number
+        # Generate custom admission ID if not already set (only for new records)
+        if not self.admission_id and not self.pk:
+            # Get the last admission to determine next number (only for new records)
             last_admission = Admission.objects.order_by('-id').first()
             if last_admission and last_admission.admission_id:
                 try:
