@@ -1,0 +1,297 @@
+{% extends 'institute/base.html' %}
+
+{% block content %}
+<div class="content-card" id="reportCard">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: #1e3a8a;">
+                <i class="fas fa-file-alt me-2"></i>Report Card
+            </h1>
+            <p class="text-muted mb-0">
+                <strong>{{ selected_student.student_name }}</strong> ({{ selected_student.admission_id }}) - {{ selected_student.course }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'report_card' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            <button class="btn btn-success" onclick="window.print()">
+                <i class="fas fa-print me-1"></i> Print
+            </button>
+        </div>
+    </div>
+    
+    <!-- Institute Header -->
+    <div class="text-center mb-4 pb-3 border-bottom">
+        <h2 style="color: #1e3a8a;">THE MOTHER INSTITUTE OF SCIENCE</h2>
+        <p>Trilochanpada, Jajpur Town, Near Maa Biraja Temple | Contact: +91 9439387324</p>
+        <h4 class="mt-3">{{ selected_exam.name }} - {{ selected_exam.batch }}</h4>
+        <p>{{ selected_exam.start_date|date:"d M Y" }} to {{ selected_exam.end_date|date:"d M Y" }}</p>
+    </div>
+    
+    <!-- Student Info -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <table class="table table-sm table-borderless">
+                <tr>
+                    <th style="width: 150px;">Student Name</th>
+                    <td>: {{ selected_student.student_name }}</td>
+                </tr>
+                <tr>
+                    <th>Father's Name</th>
+                    <td>: {{ selected_student.father_name }}</td>
+                </tr>
+                <tr>
+                    <th>Admission ID</th>
+                    <td>: {{ selected_student.admission_id }}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <table class="table table-sm table-borderless">
+                <tr>
+                    <th style="width: 150px;">Course</th>
+                    <td>: {{ selected_student.course }}</td>
+                </tr>
+                <tr>
+                    <th>Batch</th>
+                    <td>: {{ selected_student.batch }}</td>
+                </tr>
+                <tr>
+                    <th>Mobile</th>
+                    <td>: {{ selected_student.mobile_number }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Results Table -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Subject</th>
+                    <th>Exam Date</th>
+                    <th>Max Marks</th>
+                    <th>Passing Marks</th>
+                    <th>Marks Obtained</th>
+                    <th>Percentage</th>
+                    <th>Grade</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in student_results.values %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><strong>{{ item.schedule.subject.name }}</strong></td>
+                    <td>{{ item.schedule.exam_date|date:"d/m/Y" }}</td>
+                    <td class="text-center">{{ item.max_marks }}</td>
+                    <td class="text-center">{{ item.schedule.passing_marks }}</td>
+                    <td class="text-center {% if item.is_absent %}text-muted{% elif item.marks >= item.schedule.passing_marks %}text-success{% else %}text-danger{% endif %}">
+                        {% if item.is_absent %}
+                            <span class="badge bg-warning">ABSENT</span>
+                        {% else %}
+                            <strong>{{ item.marks }}</strong>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if not item.is_absent %}
+                            {% widthratio item.marks item.max_marks 100 %}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if not item.is_absent %}
+                            {% with percentage=item.marks|div:item.max_marks|mul:100 %}
+                                {% if percentage >= 90 %}
+                                    <span class="badge bg-success">A+</span>
+                                {% elif percentage >= 80 %}
+                                    <span class="badge bg-success">A</span>
+                                {% elif percentage >= 70 %}
+                                    <span class="badge bg-info">B+</span>
+                                {% elif percentage >= 60 %}
+                                    <span class="badge bg-info">B</span>
+                                {% elif percentage >= 50 %}
+                                    <span class="badge bg-warning">C</span>
+                                {% elif percentage >= 33 %}
+                                    <span class="badge bg-warning">D</span>
+                                {% else %}
+                                    <span class="badge bg-danger">F</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="badge bg-secondary">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if item.is_absent %}
+                            <span class="badge bg-warning">Absent</span>
+                        {% elif item.marks >= item.schedule.passing_marks %}
+                            <span class="badge bg-success">Pass</span>
+                        {% else %}
+                            <span class="badge bg-danger">Fail</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-light">
+                <tr>
+                    <th colspan="5" class="text-end">Total:</th>
+                    <th class="text-center">{{ total_obtained|floatformat:2 }} / {{ total_max }}</th>
+                    <th class="text-center">{{ percentage|floatformat:1 }}%</th>
+                    <th colspan="2" class="text-center">
+                        {% if percentage >= 60 %}
+                            <span class="badge bg-success">FIRST DIVISION</span>
+                        {% elif percentage >= 45 %}
+                            <span class="badge bg-info">SECOND DIVISION</span>
+                        {% elif percentage >= 33 %}
+                            <span class="badge bg-warning">THIRD DIVISION</span>
+                        {% else %}
+                            <span class="badge bg-danger">FAIL</span>
+                        {% endif %}
+                    </th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    
+    <!-- Summary -->
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card border-0 bg-light">
+                <div class="card-body">
+                    <h6>Performance Summary:</h6>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h5>{{ total_subjects }}</h5>
+                                <small class="text-muted">Total Subjects</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h5 class="text-success">{{ passed_subjects|default:"0" }}</h5>
+                                <small class="text-muted">Subjects Passed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h5 class="text-danger">{{ failed_subjects|default:"0" }}</h5>
+                                <small class="text-muted">Subjects Failed</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 bg-primary text-white">
+                <div class="card-body text-center">
+                    <h6>Overall Percentage</h6>
+                    <h2>{{ percentage|floatformat:1 }}%</h2>
+                    <h5>
+                        {% if percentage >= 60 %}
+                            FIRST DIVISION
+                        {% elif percentage >= 45 %}
+                            SECOND DIVISION
+                        {% elif percentage >= 33 %}
+                            THIRD DIVISION
+                        {% else %}
+                            FAIL
+                        {% endif %}
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Signatures -->
+    <div class="row mt-5 pt-3">
+        <div class="col-md-4 text-center">
+            <p>_________________________</p>
+            <p class="mb-0">Class Teacher</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <p>_________________________</p>
+            <p class="mb-0">Principal</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <p>_________________________</p>
+            <p class="mb-0">Director</p>
+        </div>
+    </div>
+    
+    <!-- Date -->
+    <div class="row mt-4">
+        <div class="col-md-12 text-end">
+            <p>Date: {% now "d M Y" %}</p>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn, .top-navbar, .sidebar, .footer {
+        display: none !important;
+    }
+    .main-content {
+        margin: 0;
+        padding: 20px;
+    }
+    #reportCard {
+        box-shadow: none;
+        padding: 0;
+    }
+    .table-bordered {
+        border: 2px solid #000;
+    }
+    .table-bordered th,
+    .table-bordered td {
+        border: 1px solid #000;
+    }
+    .bg-light {
+        background-color: #f8f9fa !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .bg-primary {
+        background-color: #1e3a8a !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    .text-white {
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calculate passed and failed subjects
+    const rows = document.querySelectorAll('tbody tr');
+    let passed = 0;
+    let failed = 0;
+    
+    rows.forEach(row => {
+        const status = row.querySelector('td:last-child .badge');
+        if (status) {
+            if (status.textContent.includes('Pass')) {
+                passed++;
+            } else if (status.textContent.includes('Fail')) {
+                failed++;
+            }
+        }
+    });
+    
+    // Update summary
+    document.getElementById('passedSubjects').textContent = passed;
+    document.getElementById('failedSubjects').textContent = failed;
+});
+</script>
+{% endblock %}

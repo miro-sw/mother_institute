@@ -1,0 +1,110 @@
+{% extends 'institute/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: #1e3a8a;">
+                <i class="fas {% if title == 'Add Schedule' %}fa-plus-circle{% else %}fa-edit{% endif %} me-2"></i>{{ title }}
+            </h1>
+            <p class="text-muted mb-0">
+                Exam: <strong>{{ exam.name }}</strong> ({{ exam.batch }})
+            </p>
+        </div>
+        <a href="{% url 'exam_schedule_list' exam.id %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Schedule
+        </a>
+    </div>
+    
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <form method="POST">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        {{ form.subject|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.exam_date|as_crispy_field }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.start_time|as_crispy_field }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.end_time|as_crispy_field }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.total_marks|as_crispy_field }}
+                    </div>
+                    <div class="col-md-3">
+                        {{ form.passing_marks|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.room_number|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.invigilator|as_crispy_field }}
+                    </div>
+                    <div class="col-md-12">
+                        {{ form.notes|as_crispy_field }}
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Save Schedule
+                    </button>
+                    <a href="{% url 'exam_schedule_list' exam.id %}" class="btn btn-secondary ms-2">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const totalMarks = document.getElementById('id_total_marks');
+    const passingMarks = document.getElementById('id_passing_marks');
+    
+    if (totalMarks && passingMarks) {
+        totalMarks.addEventListener('change', function() {
+            const maxMarks = parseInt(this.value) || 100;
+            const currentPassing = parseInt(passingMarks.value) || 33;
+            
+            if (currentPassing > maxMarks) {
+                passingMarks.value = Math.floor(maxMarks * 0.33); // 33% of max marks
+            }
+        });
+        
+        passingMarks.addEventListener('change', function() {
+            const maxMarks = parseInt(totalMarks.value) || 100;
+            const passing = parseInt(this.value) || 0;
+            
+            if (passing > maxMarks) {
+                alert('Passing marks cannot exceed total marks');
+                this.value = maxMarks;
+            }
+        });
+    }
+    
+    // Validate end time after start time
+    const startTime = document.getElementById('id_start_time');
+    const endTime = document.getElementById('id_end_time');
+    
+    if (startTime && endTime) {
+        endTime.addEventListener('change', function() {
+            if (startTime.value && endTime.value) {
+                if (endTime.value <= startTime.value) {
+                    alert('End time must be after start time');
+                    endTime.value = '';
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

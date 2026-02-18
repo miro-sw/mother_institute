@@ -839,6 +839,47 @@
                         </li>
                     </ul>
                 </li>
+
+                <!-- Exam Menu with Submenu - Updated (Subjects removed) -->
+                <li class="nav-item has-submenu {% if 'exam' in request.path or 'result' in request.path or 'report' in request.path %}open{% endif %}">
+                    <a class="nav-link" href="javascript:void(0);">
+                        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                            <i class="nav-icon fas fa-calendar-alt"></i>
+                            <span>Exams</span>
+                        </div>
+                        <i class="fas fa-chevron-down submenu-toggle"></i>
+                    </a>
+                    <ul class="submenu">
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'exam-dashboard' in request.path %}active{% endif %}" 
+                                href="{% url 'exam_dashboard' %}">
+                                <i class="nav-icon fas fa-chart-pie"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'exam-list' in request.path or 'add-exam' in request.path %}active{% endif %}" 
+                                href="{% url 'exam_list' %}">
+                                <i class="nav-icon fas fa-list-alt"></i>
+                                <span>Schedule</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'result-list' in request.path or 'result-entry' in request.path %}active{% endif %}" 
+                                href="{% url 'exam_list' %}?status=completed">
+                                <i class="nav-icon fas fa-poll"></i>
+                                <span>Results</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'report-card' in request.path %}active{% endif %}" 
+                                href="{% url 'report_card' %}">
+                                <i class="nav-icon fas fa-file-alt"></i>
+                                <span>Report Card</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
                 
                 <!-- Additional menu items for logged-in admin users -->
                 {% comment %} <li class="nav-item">
@@ -882,27 +923,7 @@
                 </li>
             {% endif %}
             
-            {% comment %} <!-- Additional Links -->
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="nav-icon fas fa-info-circle"></i>
-                    <span>About TMIS</span>
-                </a>
-            </li>
             
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="nav-icon fas fa-graduation-cap"></i>
-                    <span>Courses</span>
-                </a>
-            </li>
-            
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="nav-icon fas fa-phone-alt"></i>
-                    <span>Contact</span>
-                </a>
-            </li> {% endcomment %}
         </ul>
     </aside>
 

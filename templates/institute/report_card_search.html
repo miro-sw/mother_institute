@@ -1,0 +1,225 @@
+{% extends 'institute/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 style="color: #1e3a8a;">
+            <i class="fas fa-file-alt me-2"></i>Generate Report Card
+        </h1>
+    </div>
+    
+    <!-- Search Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" action="{% url 'report_card' %}" class="row g-3">
+                <div class="col-md-8">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" 
+                                class="form-control" 
+                                name="search" 
+                                placeholder="Search by Student Name, Admission ID, or Mobile Number"
+                                value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i> Search Student
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Student Selection -->
+    {% if students %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0" style="color: #1e3a8a;">
+                <i class="fas fa-users me-2"></i>Select Student
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for student in students %}
+                <div class="col-md-6 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ student.student_name }}</h6>
+                                    <p class="mb-1 small">
+                                        <span class="badge bg-primary">{{ student.admission_id }}</span>
+                                        {{ student.course }} | Batch: {{ student.batch }} | {{ student.mobile_number }}
+                                    </p>
+                                </div>
+                                <a href="{% url 'report_card' %}?student={{ student.id }}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-check-circle me-1"></i> Select
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% elif search_query %}
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body text-center py-4">
+            <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No students found</h5>
+            <p class="text-muted">No results match your search criteria.</p>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Exam Selection (shown after student is selected) -->
+    {% if selected_student %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0" style="color: #1e3a8a;">
+                <i class="fas fa-calendar-alt me-2"></i>Select Exam for <span class="text-primary">{{ selected_student.student_name }}</span>
+            </h5>
+            <small class="text-muted">
+                Admission ID: {{ selected_student.admission_id }} | 
+                Course: {{ selected_student.course }} | 
+                Batch: <strong class="text-success">{{ selected_student.batch }}</strong>
+            </small>
+        </div>
+        <div class="card-body">
+            {% if exams %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Showing only exams for batch: <strong>{{ selected_student.batch }}</strong>
+            </div>
+            <div class="row">
+                {% for exam in exams %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card border h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title mb-0">{{ exam.name }}</h6>
+                                <span class="badge bg-success">
+                                    Batch: {{ exam.batch }}
+                                </span>
+                            </div>
+                            <p class="small mb-2">
+                                <span class="badge bg-info">{{ exam.get_subject_display }}</span>
+                                <span class="badge bg-secondary">{{ exam.get_exam_type_display }}</span>
+                            </p>
+                            <p class="small text-muted mb-2">
+                                <i class="fas fa-calendar me-1"></i> {{ exam.exam_date|date:"d M Y" }}<br>
+                                <i class="fas fa-clock me-1"></i> {{ exam.start_time|time:"h:i A" }} - {{ exam.end_time|time:"h:i A" }}
+                            </p>
+                            
+                            <!-- Check if result exists for this student using dict_key filter -->
+                            {% with result=exam_results|dict_key:exam.id %}
+                            <div class="btn-group w-100" role="group">
+                                <a href="{% url 'view_report_card' exam.id selected_student.id %}" 
+                                    class="btn btn-outline-primary btn-sm"
+                                    target="_blank"
+                                    title="View in Browser">
+                                    <i class="fas fa-eye me-1"></i> View
+                                </a>
+                                {% comment %} <a href="{% url 'report_card' %}?student={{ selected_student.id }}&exam={{ exam.id }}&download=pdf" 
+                                    class="btn btn-outline-success btn-sm"
+                                    onclick="return confirm('Download PDF report card for {{ selected_student.student_name }}?')"
+                                    title="Download PDF">
+                                    <i class="fas fa-download me-1"></i> PDF
+                                </a> {% endcomment %}
+                            </div>
+                            
+                            <!-- Show result status if exists -->
+                            {% if result %}
+                            <div class="mt-2 small text-center">
+                                {% if result.is_absent %}
+                                    <span class="badge bg-warning">Absent</span>
+                                {% else %}
+                                    <span class="badge bg-{% if result.marks_obtained >= exam.passing_marks %}success{% else %}danger{% endif %}">
+                                        Marks: {{ result.marks_obtained }} | 
+                                        {% if result.marks_obtained >= exam.passing_marks %}Pass{% else %}Fail{% endif %}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div class="mt-2 small text-center">
+                                <span class="badge bg-secondary">No result entered</span>
+                            </div>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-3">
+                    <p class="text-muted">No completed exams found for batch {{ selected_student.batch }}.</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">No completed exams available for batch {{ selected_student.batch }}.</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Quick Links -->
+    <div class="card border-0 shadow-sm mt-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0" style="color: #1e3a8a;">
+                <i class="fas fa-link me-2"></i>Quick Links
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <a href="{% url 'exam_list' %}?status=completed" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-check-circle me-1"></i> Completed Exams
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{% url 'exam_list' %}" class="btn btn-outline-info w-100">
+                        <i class="fas fa-calendar-alt me-1"></i> All Exams
+                    </a>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <a href="{% url 'admissions_list' %}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-user-graduate me-1"></i> All Students
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card.border {
+        border: 1px solid #dee2e6 !important;
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    .card.border:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
+    }
+    .btn-group .btn {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
+    .btn-outline-primary:hover {
+        background-color: #1e3a8a;
+        color: white;
+    }
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+    }
+    .card-header {
+        border-bottom: 2px solid #1e3a8a;
+    }
+</style>
+{% endblock %}

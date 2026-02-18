@@ -1,0 +1,192 @@
+{% extends 'institute/base.html' %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: #1e3a8a;">
+                <i class="fas fa-clock me-2"></i>Exam Schedule
+            </h1>
+            <p class="text-muted mb-0">
+                <strong>{{ exam.name }}</strong> - {{ exam.batch }} | {{ exam.get_stream_display }} {{ exam.get_year_display }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+            {% if exam.status != 'completed' %}
+            <a href="{% url 'add_exam_schedule' exam.id %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Add Schedule
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Exam Info Card -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Exam Type</h6>
+                    <h5>{{ exam.get_exam_type_display }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Session</h6>
+                    <h5>{{ exam.get_session_display }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Duration</h6>
+                    <h5>{{ exam.start_date|date:"d/m/Y" }} - {{ exam.end_date|date:"d/m/Y" }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Status</h6>
+                    <h5>
+                        <span class="badge bg-{% if exam.status == 'completed' %}success{% elif exam.status == 'ongoing' %}warning{% elif exam.status == 'scheduled' %}info{% else %}secondary{% endif %} fs-6">
+                            {{ exam.get_status_display }}
+                        </span>
+                    </h5>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Schedules List -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0" style="color: #1e3a8a;">
+                <i class="fas fa-list me-2"></i>Subject-wise Schedule
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if schedules %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Subject</th>
+                            <th>Exam Date</th>
+                            <th>Time</th>
+                            <th>Total Marks</th>
+                            <th>Passing Marks</th>
+                            <th>Room</th>
+                            <th>Invigilator</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for schedule in schedules %}
+                        <tr>
+                            <td>
+                                <strong>{{ schedule.subject.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ schedule.subject.code }}</small>
+                            </td>
+                            <td>{{ schedule.exam_date|date:"d/m/Y" }}</td>
+                            <td>{{ schedule.start_time|time:"h:i A" }} - {{ schedule.end_time|time:"h:i A" }}</td>
+                            <td><span class="badge bg-primary">{{ schedule.total_marks }}</span></td>
+                            <td>{{ schedule.passing_marks }}</td>
+                            <td>{{ schedule.room_number|default:"-" }}</td>
+                            <td>{{ schedule.invigilator|default:"-" }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if exam.status == 'completed' %}
+                                    <a href="{% url 'result_entry' schedule.id %}" class="btn btn-outline-success" title="View/Edit Results">
+                                        <i class="fas fa-poll"></i>
+                                    </a>
+                                    {% elif exam.status == 'ongoing' or exam.status == 'scheduled' %}
+                                    <a href="{% url 'edit_exam_schedule' schedule.id %}" class="btn btn-outline-warning" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger delete-btn" 
+                                            data-schedule-id="{{ schedule.id }}" 
+                                            data-subject="{{ schedule.subject.name }}"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Action Buttons -->
+            {% if exam.status == 'completed' %}
+            <div class="mt-4">
+                <a href="{% url 'result_list' exam.id %}" class="btn btn-success">
+                    <i class="fas fa-poll me-1"></i> View All Results
+                </a>
+            </div>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No Schedule Added</h5>
+                <p class="text-muted">Add subjects and schedule for this exam.</p>
+                <a href="{% url 'add_exam_schedule' exam.id %}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-1"></i> Add First Schedule
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Delete Schedule</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete schedule for <strong id="deleteSubject"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone. All results for this subject will also be deleted.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteForm" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteSubject = document.getElementById('deleteSubject');
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const scheduleId = this.dataset.scheduleId;
+            const subject = this.dataset.subject;
+            
+            deleteSubject.textContent = subject;
+            deleteForm.action = `/schedules/delete/${scheduleId}/`;
+            deleteModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}

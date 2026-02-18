@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # ... your existing URLs (keep these) ...
     path('', views.home, name='home'),
     path('login/', views.user_login, name='login'),
     path('logout/', views.user_logout, name='logout'),
@@ -15,6 +16,7 @@ urlpatterns = [
     path('search-admission/', views.search_admission, name='search_admission'),
     path('delete-registration/<int:admission_id>/', views.delete_registration, name='delete_registration'),
     path('admissions-list/', views.admissions_list, name='admissions_list'),
+    
     # Account Management URLs
     path('account-section/', views.account_section, name='account_section'),
     path('student-account/<int:admission_id>/', views.student_account, name='student_account'),
@@ -29,15 +31,33 @@ urlpatterns = [
     path('delete-payment/<int:payment_id>/', views.delete_payment, name='delete_payment'),
     path('generate-receipt/<int:payment_id>/', views.generate_receipt, name='generate_receipt'),
     path('account-report/<int:admission_id>/', views.account_report, name='account_report'),
+    
     # API endpoints
     path('api/get-student-details/', views.get_student_details, name='get_student_details'),
-    # Organization Settings URL
-    path('organization-settings/', views.organization_settings, name='organization_settings'),
     path('api/search-students/', views.search_students, name='search_students'),
     path('api/get-student-details/<int:student_id>/', views.get_student_details_by_id, name='get_student_details_by_id'),
-    # Add this to urls.py
-    path('view-registrations/', views.view_registrations, name='view_registrations'),
-    # Add to urls.py
     path('api/get-complete-admission-details/<int:student_id>/', views.get_complete_admission_details, name='get_complete_admission_details'),
+    
+    # Organization Settings
+    path('organization-settings/', views.organization_settings, name='organization_settings'),
+    
+    # View Registrations
+    path('view-registrations/', views.view_registrations, name='view_registrations'),
     path('toggle-admit/<int:admission_id>/', views.toggle_admit, name='toggle_admit'),
+    
+    # EXAM MANAGEMENT URLS - SIMPLIFIED VERSION
+    path('exam-dashboard/', views.exam_dashboard, name='exam_dashboard'),
+    path('exams/', views.exam_list, name='exam_list'),
+    path('exams/add/', views.add_exam, name='add_exam'),
+    path('exams/edit/<int:exam_id>/', views.edit_exam, name='edit_exam'),
+    path('exams/delete/<int:exam_id>/', views.delete_exam, name='delete_exam'),
+    path('results/entry/<int:exam_id>/', views.result_entry, name='result_entry'),
+    path('results/<int:exam_id>/', views.result_list, name='result_list'),
+    path('report-card/', views.report_card, name='report_card'),
+    path('report-card/<int:exam_id>/<int:student_id>/', views.view_report_card, name='view_report_card'),
+    path('api/get-exam-stats/<int:exam_id>/', views.api_get_exam_stats, name='api_get_exam_stats'),
+    
+    # path('results/edit/<int:exam_id>/<int:student_id>/', views.edit_student_result, name='edit_student_result'),
+    # path('results/update/<int:exam_id>/<int:student_id>/', views.update_student_result, name='update_student_result'),
+    path('results/bulk-update/<int:exam_id>/', views.bulk_update_results, name='bulk_update_results'),
 ]

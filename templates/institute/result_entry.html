@@ -1,0 +1,210 @@
+{% extends 'institute/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: #1e3a8a;">
+                <i class="fas fa-poll me-2"></i>Enter Results
+            </h1>
+            <p class="text-muted mb-0">
+                <strong>{{ exam.name }}</strong> - {{ exam.get_subject_display }} | 
+                Date: {{ exam.exam_date|date:"d/m/Y" }} | 
+                Time: {{ exam.start_time|time:"h:i A" }} - {{ exam.end_time|time:"h:i A" }}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </a>
+        </div>
+    </div>
+    
+    <!-- Exam Info Card -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Students</h6>
+                    <h3>{{ students|length }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Maximum Marks</h6>
+                    <h3>{{ exam.total_marks }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Passing Marks</h6>
+                    <h3>{{ exam.passing_marks }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Results Entered</h6>
+                    <h3>{{ existing_results|length }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Result Entry Form -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0" style="color: #1e3a8a;">
+                <i class="fas fa-pen me-2"></i>Enter Marks for Students
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" id="resultForm">
+                {% csrf_token %}
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 15%">Admission ID</th>
+                                <th style="width: 25%">Student Name</th>
+                                <th style="width: 15%">Marks Obtained</th>
+                                <th style="width: 10%">Absent</th>
+                                <th style="width: 30%">Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for student in students %}
+                            {% with result=existing_results|dict_key:student.id %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ student.admission_id }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ student.student_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ student.mobile_number }}</small>
+                                </td>
+                                <td>
+                                    <input type="number" 
+                                            class="form-control form-control-sm marks-input" 
+                                            name="marks_{{ student.id }}" 
+                                            id="marks_{{ student.id }}"
+                                            value="{% if result and not result.is_absent %}{{ result.marks_obtained }}{% endif %}"
+                                            min="0" 
+                                            max="{{ exam.total_marks }}"
+                                            step="0.01"
+                                            {% if result and result.is_absent %}disabled{% endif %}>
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                                class="form-check-input absent-checkbox" 
+                                                name="absent_{{ student.id }}" 
+                                                id="absent_{{ student.id }}"
+                                                {% if result and result.is_absent %}checked{% endif %}
+                                                onchange="toggleMarksInput(this, 'marks_{{ student.id }}')">
+                                    </div>
+                                </td>
+                                <td>
+                                    <input type="text" 
+                                            class="form-control form-control-sm" 
+                                            name="remarks_{{ student.id }}"
+                                            value="{% if result %}{{ result.remarks }}{% endif %}"
+                                            placeholder="Optional">
+                                </td>
+                            </tr>
+                            {% endwith %}
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <p class="text-muted">No eligible students found for this exam.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if students %}
+                <div class="mt-4 d-flex justify-content-between">
+                    <div>
+                        <button type="button" class="btn btn-info me-2" onclick="fillSampleMarks()">
+                            <i class="fas fa-magic me-1"></i> Fill Sample
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="clearAllMarks()">
+                            <i class="fas fa-undo me-1"></i> Clear All
+                        </button>
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i> Save All Results
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .marks-input {
+        width: 120px;
+    }
+    .absent-checkbox {
+        transform: scale(1.2);
+        cursor: pointer;
+    }
+</style>
+
+<script>
+function toggleMarksInput(checkbox, marksId) {
+    const marksInput = document.getElementById(marksId);
+    if (checkbox.checked) {
+        marksInput.disabled = true;
+        marksInput.value = '';
+    } else {
+        marksInput.disabled = false;
+    }
+}
+
+function fillSampleMarks() {
+    if (!confirm('This will fill sample marks for all students. Continue?')) return;
+    
+    const maxMarks = {{ exam.total_marks }};
+    const marksInputs = document.querySelectorAll('.marks-input:not(:disabled)');
+    
+    marksInputs.forEach(input => {
+        // Generate random marks between 40 and 95
+        const marks = Math.floor(Math.random() * (maxMarks * 0.55) + (maxMarks * 0.4));
+        input.value = marks;
+    });
+}
+
+function clearAllMarks() {
+    if (!confirm('Clear all marks entries?')) return;
+    
+    document.querySelectorAll('.marks-input').forEach(input => {
+        input.value = '';
+    });
+    
+    document.querySelectorAll('.absent-checkbox').forEach(cb => {
+        cb.checked = false;
+    });
+    
+    // Re-enable all marks inputs
+    document.querySelectorAll('.marks-input').forEach(input => {
+        input.disabled = false;
+    });
+}
+</script>
+{% endblock %}

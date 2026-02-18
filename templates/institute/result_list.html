@@ -1,0 +1,492 @@
+{% extends 'institute/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: #1e3a8a;">
+                <i class="fas fa-poll me-2"></i>Student Results
+            </h1>
+            <p class="text-muted mb-0">
+                <strong>{{ exam.name }}</strong> - {{ exam.batch }} | {{ exam.get_subject_display }}
+                {% if exam.status == 'completed' %}
+                <span class="badge bg-secondary ms-2">Completed Exam</span>
+                {% else %}
+                <span class="badge bg-success ms-2">Edit Mode</span>
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back
+            </a>
+        </div>
+    </div>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Total Students</h6>
+                    <h3>{{ total_students }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Appeared</h6>
+                    <h3>{{ appeared_students }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Passed</h6>
+                    <h3>{{ passed_students }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center">
+                    <h6 class="text-muted">Average Marks</h6>
+                    <h3>{{ avg_marks|floatformat:1 }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Table with Inline Editable Marks -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" style="color: #1e3a8a;">
+                <i class="fas fa-table me-2"></i>Student Results
+            </h5>
+            <div>
+                <span class="badge bg-info me-2">
+                    <i class="fas fa-info-circle me-1"></i> Max: {{ exam.total_marks }} | Pass: {{ exam.passing_marks }}
+                </span>
+                <span class="badge bg-warning">
+                    <i class="fas fa-edit me-1"></i> Edit marks directly in table
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="POST" id="bulkResultForm" action="{% url 'bulk_update_results' exam.id %}">
+                {% csrf_token %}
+                <input type="hidden" name="exam_id" value="{{ exam.id }}">
+                
+                <div class="table-responsive">
+                    <table class="table table-hover table-bordered" id="resultsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 15%">Admission ID</th>
+                                <th style="width: 25%">Student Name</th>
+                                <th style="width: 15%">Marks Obtained <small class="text-muted">(Max: {{ exam.total_marks }})</small></th>
+                                <th style="width: 10%">Status</th>
+                                <th style="width: 10%">Percentage</th>
+                                <th style="width: 10%">Grade</th>
+                                <th style="width: 10%">Absent</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in student_results %}
+                            <tr class="student-row" data-student-id="{{ data.student.id }}">
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ data.student.admission_id }}</span>
+                                </td>
+                                <td>
+                                    <strong>{{ data.student.student_name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ data.student.mobile_number }}</small>
+                                </td>
+                                <td class="text-center">
+                                    <!-- ALWAYS SHOW EDITABLE TEXT BOX - Removed the condition -->
+                                    <div class="d-flex justify-content-center align-items-center">
+                                        <input type="number" 
+                                               class="form-control form-control-sm marks-input text-center" 
+                                               name="marks_{{ data.student.id }}" 
+                                               id="marks_{{ data.student.id }}"
+                                               value="{% if not data.is_absent %}{{ data.marks }}{% endif %}"
+                                               min="0" 
+                                               max="{{ exam.total_marks }}"
+                                               step="0.01"
+                                               data-student-id="{{ data.student.id }}"
+                                               data-original-value="{% if not data.is_absent %}{{ data.marks }}{% endif %}"
+                                               {% if data.is_absent %}disabled{% endif %}
+                                               style="width: 100px; display: inline-block;"
+                                               onchange="markAsChanged(this)"
+                                               onkeyup="updateRealTime(this)">
+                                        <span class="ms-2 text-muted">/ {{ exam.total_marks }}</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="status-badge" id="status_{{ data.student.id }}">
+                                        {% if data.is_absent %}
+                                            <span class="badge bg-warning">Absent</span>
+                                        {% elif data.marks >= exam.passing_marks %}
+                                            <span class="badge bg-success">Pass</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Fail</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td class="text-center percentage-cell" id="percentage_{{ data.student.id }}">
+                                    {% if not data.is_absent %}
+                                        {{ data.percentage|floatformat:1 }}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-center grade-cell" id="grade_{{ data.student.id }}">
+                                    {% if not data.is_absent %}
+                                        {% if data.percentage >= 90 %}
+                                            <span class="badge bg-success">A+</span>
+                                        {% elif data.percentage >= 80 %}
+                                            <span class="badge bg-success">A</span>
+                                        {% elif data.percentage >= 70 %}
+                                            <span class="badge bg-info">B+</span>
+                                        {% elif data.percentage >= 60 %}
+                                            <span class="badge bg-info">B</span>
+                                        {% elif data.percentage >= 50 %}
+                                            <span class="badge bg-warning">C</span>
+                                        {% elif data.percentage >= 33 %}
+                                            <span class="badge bg-warning">D</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">F</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="badge bg-secondary">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="form-check">
+                                        <input type="checkbox" 
+                                                class="form-check-input absent-checkbox" 
+                                                name="absent_{{ data.student.id }}" 
+                                                id="absent_{{ data.student.id }}"
+                                                {% if data.is_absent %}checked{% endif %}
+                                                onchange="toggleAbsent(this, '{{ data.student.id }}')">
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <i class="fas fa-poll fa-3x text-muted mb-3"></i>
+                                    <p class="text-muted">No results found for this exam.</p>
+                                    <a href="{% url 'result_entry' exam.id %}" class="btn btn-primary">
+                                        <i class="fas fa-plus-circle me-1"></i> Enter Results
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Save Changes Button - Always show if there are students -->
+                {% if student_results %}
+                <div class="mt-4 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="text-muted" id="changesCount">No changes made</span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-secondary me-2" onclick="resetChanges()">
+                            <i class="fas fa-undo me-1"></i> Reset
+                        </button>
+                        <button type="submit" class="btn btn-success" id="saveChangesBtn">
+                            <i class="fas fa-save me-1"></i> Save All Changes
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </form>
+            
+            <!-- Export Options -->
+            {% comment %} {% if student_results %}
+            <div class="mt-4 d-flex justify-content-end">
+                <button class="btn btn-outline-primary me-2" onclick="exportToCSV()">
+                    <i class="fas fa-file-csv me-1"></i> Export to CSV
+                </button>
+                <button class="btn btn-outline-danger" onclick="window.print()">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+            </div>
+            {% endif %} {% endcomment %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Track changed rows
+let changedRows = new Set();
+let originalData = {};
+
+// Initialize original data
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.marks-input').forEach(input => {
+        const studentId = input.dataset.studentId;
+        originalData[studentId] = {
+            marks: input.value,
+            absent: document.getElementById(`absent_${studentId}`).checked
+        };
+    });
+    updateSaveButton();
+});
+
+// Mark row as changed
+function markAsChanged(input) {
+    const studentId = input.dataset.studentId;
+    const absentCheckbox = document.getElementById(`absent_${studentId}`);
+    const currentMarks = input.value;
+    const currentAbsent = absentCheckbox.checked;
+    
+    // Check if changed from original
+    if (originalData[studentId]) {
+        if (currentMarks !== originalData[studentId].marks || 
+            currentAbsent !== originalData[studentId].absent) {
+            changedRows.add(studentId);
+            highlightRow(studentId, true);
+        } else {
+            changedRows.delete(studentId);
+            highlightRow(studentId, false);
+        }
+    }
+    
+    updateSaveButton();
+    updateChangesCount();
+}
+
+// Real-time update as user types
+function updateRealTime(input) {
+    const studentId = input.dataset.studentId;
+    const absentCheckbox = document.getElementById(`absent_${studentId}`);
+    updateStudentStats(studentId, input.value, absentCheckbox.checked);
+    markAsChanged(input);
+}
+
+// Toggle absent checkbox
+function toggleAbsent(checkbox, studentId) {
+    const marksInput = document.getElementById(`marks_${studentId}`);
+    marksInput.disabled = checkbox.checked;
+    if (checkbox.checked) {
+        marksInput.value = '';
+    }
+    
+    // Update stats
+    updateStudentStats(studentId, marksInput.value, checkbox.checked);
+    
+    // Mark as changed
+    if (originalData[studentId]) {
+        if (marksInput.value !== originalData[studentId].marks || 
+            checkbox.checked !== originalData[studentId].absent) {
+            changedRows.add(studentId);
+            highlightRow(studentId, true);
+        } else {
+            changedRows.delete(studentId);
+            highlightRow(studentId, false);
+        }
+    }
+    
+    updateSaveButton();
+    updateChangesCount();
+}
+
+// Update student statistics in real-time
+function updateStudentStats(studentId, marks, isAbsent) {
+    const maxMarks = {{ exam.total_marks }};
+    const passingMarks = {{ exam.passing_marks }};
+    
+    const statusSpan = document.getElementById(`status_${studentId}`);
+    const percentageSpan = document.getElementById(`percentage_${studentId}`);
+    const gradeSpan = document.getElementById(`grade_${studentId}`);
+    
+    if (isAbsent || !marks) {
+        statusSpan.innerHTML = '<span class="badge bg-warning">Absent</span>';
+        percentageSpan.innerHTML = '-';
+        gradeSpan.innerHTML = '<span class="badge bg-secondary">-</span>';
+        return;
+    }
+    
+    marks = parseFloat(marks) || 0;
+    const percentage = (marks / maxMarks * 100);
+    
+    // Update status
+    if (marks >= passingMarks) {
+        statusSpan.innerHTML = '<span class="badge bg-success">Pass</span>';
+    } else {
+        statusSpan.innerHTML = '<span class="badge bg-danger">Fail</span>';
+    }
+    
+    // Update percentage
+    percentageSpan.innerHTML = percentage.toFixed(1) + '%';
+    
+    // Update grade
+    let gradeClass = '';
+    let gradeText = '';
+    
+    if (percentage >= 90) { gradeClass = 'bg-success'; gradeText = 'A+'; }
+    else if (percentage >= 80) { gradeClass = 'bg-success'; gradeText = 'A'; }
+    else if (percentage >= 70) { gradeClass = 'bg-info'; gradeText = 'B+'; }
+    else if (percentage >= 60) { gradeClass = 'bg-info'; gradeText = 'B'; }
+    else if (percentage >= 50) { gradeClass = 'bg-warning'; gradeText = 'C'; }
+    else if (percentage >= 33) { gradeClass = 'bg-warning'; gradeText = 'D'; }
+    else { gradeClass = 'bg-danger'; gradeText = 'F'; }
+    
+    gradeSpan.innerHTML = `<span class="badge ${gradeClass}">${gradeText}</span>`;
+}
+
+// Highlight changed row
+function highlightRow(studentId, highlight) {
+    const row = document.querySelector(`tr[data-student-id="${studentId}"]`);
+    if (row) {
+        if (highlight) {
+            row.classList.add('table-warning');
+        } else {
+            row.classList.remove('table-warning');
+        }
+    }
+}
+
+// Update save button state
+function updateSaveButton() {
+    const saveBtn = document.getElementById('saveChangesBtn');
+    if (saveBtn) {
+        saveBtn.disabled = changedRows.size === 0;
+    }
+}
+
+// Update changes count display
+function updateChangesCount() {
+    const changesSpan = document.getElementById('changesCount');
+    if (changesSpan) {
+        if (changedRows.size === 0) {
+            changesSpan.innerHTML = 'No changes made';
+        } else {
+            changesSpan.innerHTML = `${changedRows.size} change(s) made`;
+        }
+    }
+}
+
+// Reset all changes
+function resetChanges() {
+    if (!confirm('Reset all changes to original values?')) return;
+    
+    changedRows.clear();
+    
+    document.querySelectorAll('.marks-input').forEach(input => {
+        const studentId = input.dataset.studentId;
+        const absentCheckbox = document.getElementById(`absent_${studentId}`);
+        
+        if (originalData[studentId]) {
+            input.value = originalData[studentId].marks;
+            absentCheckbox.checked = originalData[studentId].absent;
+            input.disabled = originalData[studentId].absent;
+            
+            highlightRow(studentId, false);
+            updateStudentStats(studentId, input.value, absentCheckbox.checked);
+        }
+    });
+    
+    updateSaveButton();
+    updateChangesCount();
+}
+
+
+// Export to CSV
+function exportToCSV() {
+    const rows = [['#', 'Admission ID', 'Student Name', 'Marks Obtained', 'Status', 'Percentage', 'Grade', 'Absent']];
+    
+    document.querySelectorAll('#resultsTable tbody tr').forEach((row, index) => {
+        if (row.cells.length > 1 && !row.querySelector('td[colspan]')) {
+            const admissionId = row.cells[1].textContent.trim();
+            const studentName = row.cells[2].textContent.trim().split('\n')[0];
+            const marks = row.cells[3].querySelector('input') ? 
+                            row.cells[3].querySelector('input').value : 
+                            row.cells[3].textContent.trim();
+            const status = row.cells[4].textContent.trim();
+            const percentage = row.cells[5].textContent.trim();
+            const grade = row.cells[6].textContent.trim();
+            const absent = row.cells[7].querySelector('input') ? 
+                            (row.cells[7].querySelector('input').checked ? 'Yes' : 'No') : 
+                            row.cells[7].textContent.trim();
+            
+            rows.push([index + 1, admissionId, studentName, marks, status, percentage, grade, absent]);
+        }
+    });
+    
+    const csvContent = rows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'exam_results.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+
+</script>
+
+<style>
+    .marks-input {
+        width: 100px;
+        display: inline-block;
+        text-align: center;
+        border: 2px solid #dee2e6;
+        transition: all 0.2s;
+        font-weight: 500;
+    }
+    .marks-input:focus {
+        border-color: #1e3a8a;
+        box-shadow: 0 0 0 0.2rem rgba(30, 58, 138, 0.25);
+    }
+    .marks-input.changed {
+        border-color: #ffc107;
+        background-color: #fff3cd;
+    }
+    .absent-checkbox {
+        transform: scale(1.2);
+        cursor: pointer;
+    }
+    .table-warning {
+        background-color: #fff3cd !important;
+    }
+    .table-warning td {
+        background-color: #fff3cd !important;
+    }
+    #saveChangesBtn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    .student-row {
+        transition: background-color 0.2s;
+    }
+    .student-row:hover {
+        background-color: rgba(0,0,0,.02);
+    }
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+    }
+    @media print {
+        .marks-input, .absent-checkbox, .btn, .top-navbar, .sidebar, .footer {
+            display: none !important;
+        }
+        .table {
+            border: 2px solid #000;
+        }
+        .badge {
+            border: 1px solid #000;
+            color: #000 !important;
+            background: transparent !important;
+        }
+    }
+</style>
+{% endblock %}

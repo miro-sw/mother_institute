@@ -1,0 +1,167 @@
+{% extends 'institute/base.html' %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 style="color: #1e3a8a;">
+            <i class="fas fa-calendar-alt me-2"></i>Exam Dashboard
+        </h1>
+        <div>
+            <a href="{% url 'exam_list' %}" class="btn btn-primary">
+                <i class="fas fa-list me-1"></i> Manage Exams
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-check fa-3x text-primary mb-3"></i>
+                    <h6 class="text-muted">Total Exams</h6>
+                    <h3>{{ total_exams }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                    <h6 class="text-muted">Scheduled</h6>
+                    <h3>{{ scheduled_exams }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-spinner fa-3x text-info mb-3"></i>
+                    <h6 class="text-muted">Ongoing</h6>
+                    <h3>{{ ongoing_exams }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                    <h6 class="text-muted">Completed</h6>
+                    <h3>{{ completed_exams }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Today's Exams -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0" style="color: #1e3a8a;">
+                        <i class="fas fa-calendar-day me-2"></i>Today's Exams
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if today_exams %}
+                    <div class="list-group">
+                        {% for exam in today_exams %}
+                        <a href="{% url 'result_entry' exam.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ exam.name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ exam.get_subject_display }} | {{ exam.start_time|time:"h:i A" }} - {{ exam.end_time|time:"h:i A" }}</small>
+                                </div>
+                                <span class="badge bg-{% if exam.status == 'completed' %}success{% elif exam.status == 'ongoing' %}warning{% else %}info{% endif %}">
+                                    {{ exam.get_status_display }}
+                                </span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No exams scheduled for today</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Upcoming Exams -->
+        <div class="col-md-6 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0" style="color: #1e3a8a;">
+                        <i class="fas fa-arrow-up me-2"></i>Upcoming Exams
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_exams %}
+                    <div class="list-group">
+                        {% for exam in upcoming_exams %}
+                        <a href="{% url 'edit_exam' exam.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ exam.name }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        {{ exam.get_subject_display }} | 
+                                        {{ exam.exam_date|date:"d M Y" }} | 
+                                        {{ exam.start_time|time:"h:i A" }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-primary">{{ exam.total_marks }} Marks</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">No upcoming exams scheduled</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0" style="color: #1e3a8a;">
+                <i class="fas fa-bolt me-2"></i>Quick Actions
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4 mb-2">
+                    <a href="{% url 'add_exam' %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-plus-circle me-1"></i> Create New Exam
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <a href="{% url 'exam_list' %}?status=ongoing" class="btn btn-outline-warning w-100">
+                        <i class="fas fa-spinner me-1"></i> Ongoing Exams
+                    </a>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <a href="{% url 'report_card' %}" class="btn btn-outline-success w-100">
+                        <i class="fas fa-file-pdf me-1"></i> Generate Report Card
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .list-group-item {
+        border-left: none;
+        border-right: none;
+    }
+    .list-group-item:first-child {
+        border-top: none;
+    }
+    .list-group-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}

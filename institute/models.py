@@ -222,3 +222,147 @@ class Organization(models.Model):
         ordering = ['name']
         verbose_name = "Organization"
         verbose_name_plural = "Organizations"
+
+
+# Remove the entire Subject model class
+# Keep only Exam, ExamSchedule, StudentResult, and ExamAttendance models
+
+class Exam(models.Model):
+    """Exam model"""
+    EXAM_TYPE_CHOICES = [
+        ('weekly', 'Weekly Test'),
+        ('monthly', 'Monthly Test'),
+        ('quarterly', 'Quarterly Exam'),
+        ('half_yearly', 'Half Yearly Exam'),
+        ('annual', 'Annual Exam'),
+        ('pre_board', 'Pre-Board Exam'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('ongoing', 'Ongoing'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    SESSION_CHOICES = [
+        ('morning', 'Morning Session (8 AM - 11 AM)'),
+        ('afternoon', 'Afternoon Session (12 PM - 3 PM)'),
+        ('evening', 'Evening Session (4 PM - 7 PM)'),
+    ]
+    
+    SUBJECT_CHOICES = [
+        # 11th Science Subjects
+        ('physics_11', 'Physics (11th Science)'),
+        ('chemistry_11', 'Chemistry (11th Science)'),
+        ('mathematics_11', 'Mathematics (11th Science)'),
+        ('biology_11', 'Biology (11th Science)'),
+        ('english_11', 'English (11th Science)'),
+        
+        # 12th Science Subjects
+        ('physics_12', 'Physics (12th Science)'),
+        ('chemistry_12', 'Chemistry (12th Science)'),
+        ('mathematics_12', 'Mathematics (12th Science)'),
+        ('biology_12', 'Biology (12th Science)'),
+        ('english_12', 'English (12th Science)'),
+    ]
+    
+    STREAM_CHOICES = [
+        ('science', 'Science'),
+        ('commerce', 'Commerce'),
+        ('arts', 'Arts'),
+    ]
+    
+    YEAR_CHOICES = [
+        ('11th', '11th Class'),
+        ('12th', '12th Class'),
+    ]
+    
+    name = models.CharField(max_length=200)
+    exam_type = models.CharField(max_length=20, choices=EXAM_TYPE_CHOICES, default='monthly')
+    subject = models.CharField(max_length=20, choices=SUBJECT_CHOICES, default='physics_11')
+    session = models.CharField(max_length=20, choices=SESSION_CHOICES, default='morning')
+    batch = models.CharField(max_length=50, help_text="Batch year (e.g., 2024-2025)")
+    stream = models.CharField(max_length=20, choices=STREAM_CHOICES, default='science')  # Added choices
+    year = models.CharField(max_length=10, choices=YEAR_CHOICES, default='11th')  # Added choices
+    exam_date = models.DateField(null=True, blank=True)
+    start_time = models.TimeField(null=True, blank=True)
+    end_time = models.TimeField(null=True, blank=True)
+    total_marks = models.IntegerField(default=100)
+    passing_marks = models.IntegerField(default=33)
+    room_number = models.CharField(max_length=50, blank=True)
+    invigilator = models.CharField(max_length=100, blank=True)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"{self.name} - {self.get_subject_display()} - {self.batch}"
+    
+    class Meta:
+        ordering = ['-exam_date']
+
+
+class StudentResult(models.Model):
+    """Student marks for each exam"""
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='results', null=True, blank=True)
+    student = models.ForeignKey(Admission, on_delete=models.CASCADE, related_name='exam_results')
+    marks_obtained = models.DecimalField(max_digits=5, decimal_places=2)
+    is_absent = models.BooleanField(default=False)
+    remarks = models.CharField(max_length=255, blank=True)
+    entered_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    entered_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ['exam', 'student']
+        ordering = ['exam__exam_date', 'student__student_name']
+    
+    def __str__(self):
+        status = "Absent" if self.is_absent else f"Marks: {self.marks_obtained}"
+        return f"{self.student.student_name} - {self.exam.get_subject_display() if self.exam else 'No Exam'} - {status}"
+    
+    @property
+    def percentage(self):
+        if self.exam and self.exam.total_marks > 0 and not self.is_absent:
+            return (self.marks_obtained / self.exam.total_marks) * 100
+        return 0
+    
+    @property
+    def grade(self):
+        if self.is_absent:
+            return "AB"
+        percentage = self.percentage
+        if percentage >= 90:
+            return "A+"
+        elif percentage >= 80:
+            return "A"
+        elif percentage >= 70:
+            return "B+"
+        elif percentage >= 60:
+            return "B"
+        elif percentage >= 50:
+            return "C"
+        elif percentage >= 33:
+            return "D"
+        else:
+            return "F"
+
+
+class ExamAttendance(models.Model):
+    """Track which students appeared for which exam"""
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='attendance')
+    student = models.ForeignKey(Admission, on_delete=models.CASCADE, related_name='exam_attendance')
+    is_present = models.BooleanField(default=True)
+    marked_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True)
+    marked_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ['exam', 'student']
+    
+    def __str__(self):
+        status = "Present" if self.is_present else "Absent"
+        return f"{self.student.student_name} - {self.exam.name} - {status}"

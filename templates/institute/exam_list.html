@@ -1,0 +1,221 @@
+{% extends 'institute/base.html' %}
+
+{% block content %}
+<div class="content-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 style="color: #1e3a8a;">
+            <i class="fas fa-calendar-alt me-2"></i>Exam Schedule
+        </h1>
+        <div>
+            <a href="{% url 'add_exam' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Create New Exam
+            </a>
+        </div>
+    </div>
+    
+    <!-- Search and Filter Section -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text" 
+                                class="form-control" 
+                                name="search" 
+                                placeholder="Search by exam name or batch..."
+                                value="{{ search_query }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Status</option>
+                        <option value="scheduled" {% if status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                        <option value="ongoing" {% if status == 'ongoing' %}selected{% endif %}>Ongoing</option>
+                        <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-1"></i> Apply
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-redo"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Exams List -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            {% if exams %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Exam Name</th>
+                            <th>Subject</th>
+                            <th>Type</th>
+                            <th>Batch</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Marks</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exam in exams %}
+                        <tr>
+                            <td>
+                                <strong>{{ exam.name }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ exam.get_subject_display }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ exam.get_exam_type_display }}</span>
+                            </td>
+                            <td>{{ exam.batch }}</td>
+                            <td>{{ exam.exam_date|date:"d/m/Y" }}</td>
+                            <td>{{ exam.start_time|time:"h:i A" }} - {{ exam.end_time|time:"h:i A" }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ exam.total_marks }}</span>
+                                <br>
+                                <small>Pass: {{ exam.passing_marks }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if exam.status == 'completed' %}success{% elif exam.status == 'ongoing' %}warning{% elif exam.status == 'scheduled' %}info{% else %}secondary{% endif %}">
+                                    {{ exam.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if exam.status == 'completed' %}
+                                    <a href="{% url 'result_list' exam.id %}" class="btn btn-outline-success" title="View Results">
+                                        <i class="fas fa-poll"></i>
+                                    </a>
+                                    {% else %}
+                                    <a href="{% url 'result_entry' exam.id %}" class="btn btn-outline-primary" title="Enter Results">
+                                        <i class="fas fa-pen"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="{% url 'edit_exam' exam.id %}" class="btn btn-outline-warning" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger delete-btn" 
+                                            data-exam-id="{{ exam.id }}" 
+                                            data-exam-name="{{ exam.name }}"
+                                            title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if exams.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if exams.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ exams.previous_page_number }}{% if status %}&status={{ status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in exams.paginator.page_range %}
+                        {% if exams.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if status %}&status={{ status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if exams.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ exams.next_page_number }}{% if status %}&status={{ status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No Exams Found</h5>
+                <p class="text-muted">
+                    {% if search_query or status %}
+                    No exams match your search criteria. Try different filters.
+                    {% else %}
+                    Start by creating your first exam.
+                    {% endif %}
+                </p>
+                <a href="{% url 'add_exam' %}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-1"></i> Create New Exam
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirm Delete Exam</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete exam: <strong id="deleteExamName"></strong>?</p>
+                <p class="text-danger"><small>This action cannot be undone. All schedules and results for this exam will also be deleted.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteForm" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Exam</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const deleteForm = document.getElementById('deleteForm');
+    const deleteExamName = document.getElementById('deleteExamName');
+    
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const examId = this.dataset.examId;
+            const examName = this.dataset.examName;
+            
+            deleteExamName.textContent = examName;
+            deleteForm.action = `/exams/delete/${examId}/`;
+            deleteModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}
