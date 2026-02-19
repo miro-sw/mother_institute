@@ -110,19 +110,19 @@
                                     <!-- ALWAYS SHOW EDITABLE TEXT BOX - Removed the condition -->
                                     <div class="d-flex justify-content-center align-items-center">
                                         <input type="number" 
-                                               class="form-control form-control-sm marks-input text-center" 
-                                               name="marks_{{ data.student.id }}" 
-                                               id="marks_{{ data.student.id }}"
-                                               value="{% if not data.is_absent %}{{ data.marks }}{% endif %}"
-                                               min="0" 
-                                               max="{{ exam.total_marks }}"
-                                               step="0.01"
-                                               data-student-id="{{ data.student.id }}"
-                                               data-original-value="{% if not data.is_absent %}{{ data.marks }}{% endif %}"
-                                               {% if data.is_absent %}disabled{% endif %}
-                                               style="width: 100px; display: inline-block;"
-                                               onchange="markAsChanged(this)"
-                                               onkeyup="updateRealTime(this)">
+                                                class="form-control form-control-sm marks-input text-center" 
+                                                name="marks_{{ data.student.id }}" 
+                                                id="marks_{{ data.student.id }}"
+                                                value="{% if not data.is_absent %}{{ data.marks }}{% endif %}"
+                                                min="0" 
+                                                max="{{ exam.total_marks }}"
+                                                step="0.01"
+                                                data-student-id="{{ data.student.id }}"
+                                                data-original-value="{% if not data.is_absent %}{{ data.marks }}{% endif %}"
+                                                {% if data.is_absent %}disabled{% endif %}
+                                                style="width: 100px; display: inline-block;"
+                                                onchange="markAsChanged(this)"
+                                                onkeyup="updateRealTime(this)">
                                         <span class="ms-2 text-muted">/ {{ exam.total_marks }}</span>
                                     </div>
                                 </td>
