@@ -125,12 +125,12 @@
                                     title="View in Browser">
                                     <i class="fas fa-eye me-1"></i> View
                                 </a>
-                                {% comment %} <a href="{% url 'report_card' %}?student={{ selected_student.id }}&exam={{ exam.id }}&download=pdf" 
+                                <a href="{% url 'report_card' %}?student={{ selected_student.id }}&exam={{ exam.id }}&download=pdf" 
                                     class="btn btn-outline-success btn-sm"
                                     onclick="return confirm('Download PDF report card for {{ selected_student.student_name }}?')"
                                     title="Download PDF">
                                     <i class="fas fa-download me-1"></i> PDF
-                                </a> {% endcomment %}
+                                </a>
                             </div>
                             
                             <!-- Show result status if exists -->
