@@ -202,6 +202,32 @@
                         {{ form.course|as_crispy_field }}
                     </div>
                 </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5 class="border-bottom pb-2">Subject Details:</h5>
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.subject1|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.subject2|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.subject3|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.subject4|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.subject5|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.subject6|as_crispy_field }}
+                    </div>
+                </div>
+
+            
                 
                 <!-- ... Include all other form sections from admission_form.html ... -->
                 
@@ -234,6 +260,7 @@
                             <th>Mobile</th>
                             <th>Course</th>
                             <th>Date</th>
+                            
                             <th>Admitted</th>
                             <th>Action</th>
                         </tr>

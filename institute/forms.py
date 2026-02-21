@@ -51,8 +51,6 @@ class AdmissionForm(forms.ModelForm):
         # Mark optional fields as not required
         optional_fields = [
             'enrolled_for', 'hostel_fees', 'admitted_college_fees',
-            'installment1', 'installment2', 'installment3', 
-            'installment4', 'installment5', 'installment6',
             'tms_fees', 'sams_login_id', 'sams_password',
             'pen_number', 'apaar_id', 'college_dress', 'books',
             'college_transportation', 'tms_dress', 'academics_accommodation',

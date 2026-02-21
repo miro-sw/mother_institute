@@ -1238,6 +1238,7 @@ def get_active_organization(request):
     except:
         return None
 
+
 # Add this function to views.py
 
 def organization_settings(request):
@@ -1606,12 +1607,12 @@ def get_complete_admission_details(request, student_id):
             'visitor2_relation': admission.visitor2_relation,
             'visitor2_contact': admission.visitor2_contact,
             'academics_accommodation': admission.academics_accommodation,
-            'installment1': float(admission.installment1) if admission.installment1 else 0.0,
-            'installment2': float(admission.installment2) if admission.installment2 else 0.0,
-            'installment3': float(admission.installment3) if admission.installment3 else 0.0,
-            'installment4': float(admission.installment4) if admission.installment4 else 0.0,
-            'installment5': float(admission.installment5) if admission.installment5 else 0.0,
-            'installment6': float(admission.installment6) if admission.installment6 else 0.0,
+            'subject1': admission.subject1 or '',
+            'subject2': admission.subject2 or '',
+            'subject3': admission.subject3 or '',
+            'subject4': admission.subject4 or '',
+            'subject5': admission.subject5 or '',
+            'subject6': admission.subject6 or '',
             'college_dress': admission.college_dress,
             'books': admission.books,
             'tms_dress': admission.tms_dress,

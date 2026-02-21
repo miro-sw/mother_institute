@@ -78,14 +78,17 @@ class Admission(models.Model):
     college_transportation = models.CharField(max_length=100, blank=True)
     tms_dress = models.CharField(max_length=100, blank=True)
     
-    # Installments
-    installment1 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-    installment2 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-    installment3 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-    installment4 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-    installment5 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-    installment6 = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
-    
+    # Subjects
+    subject1 = models.CharField(max_length=100, blank=True, null=True,default="Odia")
+    subject2 = models.CharField(max_length=100, blank=True, null=True,default="English")
+    subject3 = models.CharField(max_length=100, blank=True, null=True,default="Mathematics")
+    subject4 = models.CharField(max_length=100, blank=True, null=True,default="Physics")
+    subject5 = models.CharField(max_length=100, blank=True, null=True,default="Chemistry")
+    subject6 = models.CharField(max_length=100, blank=True, null=True, default='Biology', choices=[
+        ('Information Technology', 'Information Technology'),
+        ('Electronics', 'Electronics'),
+        ('Biology', 'Biology'),
+    ])
     tms_fees = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, null=True)
     
     # Signatures (in real app, these would be FileFields)
