@@ -1764,22 +1764,199 @@ def delete_exam(request, exam_id):
 
 
 @login_required
-def result_entry(request, exam_id):
-    """Enter results for an exam"""
+def result_list(request, exam_id):
+    """View results for an exam - Only show students who take that subject"""
     if request.user.user_type != 'admin':
         return redirect('home')
     
     exam = get_object_or_404(Exam, id=exam_id)
     
-    # Get students eligible for this exam (based on stream, year, and batch)
-    students = Admission.objects.filter(
+    # Get the subject from the exam (e.g., 'it_11' or 'electronics_12')
+    exam_subject = exam.subject
+    
+    # Extract the base subject name (remove _11 or _12 suffix)
+    if '_11' in exam_subject:
+        base_subject = exam_subject.replace('_11', '')
+        year = '11th'
+    elif '_12' in exam_subject:
+        base_subject = exam_subject.replace('_12', '')
+        year = '12th'
+    else:
+        base_subject = exam_subject
+        year = exam.year
+    
+    # Map subject codes to display names and search terms
+    subject_map = {
+        'odia': ['odia', 'odia'],
+        'english': ['english', 'english'],
+        'physics': ['physics', 'physics'],
+        'chemistry': ['chemistry', 'chemistry'],
+        'mathematics': ['mathematics', 'mathematics', 'math'],
+        'biology': ['biology', 'biology'],
+        'it': ['information technology', 'it', 'information'],
+        'electronics': ['electronics', 'electronics'],
+    }
+    
+    # Get the search terms for this subject
+    search_terms = subject_map.get(base_subject.lower(), [base_subject.lower()])
+    display_subject = subject_map.get(base_subject.lower(), [base_subject])[0].title()
+    
+    print(f"Exam: {exam.name}")
+    print(f"Exam Subject Code: {exam_subject}")
+    print(f"Base Subject: {base_subject}")
+    print(f"Search Terms: {search_terms}")
+    print(f"Display Subject: {display_subject}")
+    
+    # Get all admitted students with matching batch
+    all_students = Admission.objects.filter(
         is_admitted=True,
-        course__icontains=exam.stream,
         batch=exam.batch
     ).order_by('student_name')
     
+    print(f"Total students in batch {exam.batch}: {all_students.count()}")
+    
+    # Filter students who have this subject in any of their subject fields
+    students = []
+    for student in all_students:
+        student_subjects = [
+            (student.subject1 or '').lower(),
+            (student.subject2 or '').lower(),
+            (student.subject3 or '').lower(),
+            (student.subject4 or '').lower(),
+            (student.subject5 or '').lower(),
+            (student.subject6 or '').lower(),
+        ]
+        
+        # Check if any search term appears in any student subject
+        subject_found = False
+        for student_subj in student_subjects:
+            for term in search_terms:
+                if term in student_subj:
+                    subject_found = True
+                    break
+            if subject_found:
+                break
+        
+        if subject_found:
+            students.append(student)
+            print(f"  ✓ {student.student_name} - Subjects: {', '.join([s for s in student_subjects if s])}")
+        else:
+            print(f"  ✗ {student.student_name} - Subjects: {', '.join([s for s in student_subjects if s])}")
+    
+    # Get all results
+    results = StudentResult.objects.filter(
+        exam=exam
+    ).select_related('student')
+    
+    # Create a dictionary of results by student ID for quick lookup
+    results_dict = {r.student_id: r for r in results}
+    
+    # Organize results by student
+    student_results = []
+    for student in students:
+        result = results_dict.get(student.id)
+        student_results.append({
+            'student': student,
+            'result': result,
+            'marks': result.marks_obtained if result and not result.is_absent else 0,
+            'is_absent': result.is_absent if result else False,
+            'percentage': result.percentage if result else 0,
+            'grade': result.grade if result else 'N/A'
+        })
+    
+    # Calculate statistics
+    total_students = len(students)
+    appeared_students = len([r for r in results if not r.is_absent])
+    passed_students = len([r for r in results if not r.is_absent and r.marks_obtained >= exam.passing_marks])
+    
+    # Calculate average marks
+    if appeared_students > 0:
+        total_marks = sum([r.marks_obtained for r in results if not r.is_absent])
+        avg_marks = total_marks / appeared_students
+    else:
+        avg_marks = 0
+    
+    context = {
+        'exam': exam,
+        'student_results': student_results,
+        'total_students': total_students,
+        'appeared_students': appeared_students,
+        'passed_students': passed_students,
+        'avg_marks': avg_marks,
+        'subject_display': display_subject,
+        'base_subject': base_subject,
+        'search_terms': search_terms,
+    }
+    return render(request, 'institute/result_list.html', context)
+
+
+@login_required
+def result_entry(request, exam_id):
+    """Enter results for an exam - Only show students who take that subject"""
+    if request.user.user_type != 'admin':
+        return redirect('home')
+    
+    exam = get_object_or_404(Exam, id=exam_id)
+    
+    # Get the subject from the exam
+    exam_subject = exam.subject
+    
+    # Extract the base subject name
+    if '_11' in exam_subject:
+        base_subject = exam_subject.replace('_11', '')
+    elif '_12' in exam_subject:
+        base_subject = exam_subject.replace('_12', '')
+    else:
+        base_subject = exam_subject
+    
+    # Map subject codes to search terms
+    subject_map = {
+        'odia': ['odia'],
+        'english': ['english'],
+        'physics': ['physics'],
+        'chemistry': ['chemistry'],
+        'mathematics': ['mathematics', 'math'],
+        'biology': ['biology'],
+        'it': ['information technology', 'it'],
+        'electronics': ['electronics'],
+    }
+    
+    search_terms = subject_map.get(base_subject.lower(), [base_subject.lower()])
+    display_subject = subject_map.get(base_subject.lower(), [base_subject])[0].title()
+    
+    # Get all admitted students with matching batch
+    all_students = Admission.objects.filter(
+        is_admitted=True,
+        batch=exam.batch
+    ).order_by('student_name')
+    
+    # Filter students who have this subject
+    students = []
+    for student in all_students:
+        student_subjects = [
+            (student.subject1 or '').lower(),
+            (student.subject2 or '').lower(),
+            (student.subject3 or '').lower(),
+            (student.subject4 or '').lower(),
+            (student.subject5 or '').lower(),
+            (student.subject6 or '').lower(),
+        ]
+        
+        subject_found = False
+        for student_subj in student_subjects:
+            for term in search_terms:
+                if term in student_subj:
+                    subject_found = True
+                    break
+            if subject_found:
+                break
+        
+        if subject_found:
+            students.append(student)
+    
     if request.method == 'POST':
         # Process bulk result entry
+        updated_count = 0
         for student in students:
             marks_key = f'marks_{student.id}'
             absent_key = f'absent_{student.id}'
@@ -1789,9 +1966,9 @@ def result_entry(request, exam_id):
             is_absent = request.POST.get(absent_key) == 'on'
             remarks = request.POST.get(remarks_key, '')
             
-            if marks or is_absent:
-                # Get or create result
-                result, created = StudentResult.objects.update_or_create(
+            # Only update if the field was present in the form
+            if marks_key in request.POST or absent_key in request.POST:
+                StudentResult.objects.update_or_create(
                     exam=exam,
                     student=student,
                     defaults={
@@ -1801,8 +1978,9 @@ def result_entry(request, exam_id):
                         'entered_by': request.user
                     }
                 )
+                updated_count += 1
         
-        messages.success(request, f'Results for {exam.get_subject_display()} saved successfully!')
+        messages.success(request, f'Successfully updated {updated_count} student results for {display_subject}!')
         return redirect('result_list', exam_id=exam.id)
     
     # Get existing results
@@ -1814,57 +1992,134 @@ def result_entry(request, exam_id):
         'exam': exam,
         'students': students,
         'existing_results': existing_results,
+        'subject_display': display_subject,
+        'total_students': len(students),
     }
     return render(request, 'institute/result_entry.html', context)
 
+
 @login_required
-def result_list(request, exam_id):
-    """View results for an exam"""
+@require_POST
+def bulk_update_results(request, exam_id):
+    """Bulk update multiple student results at once"""
     if request.user.user_type != 'admin':
-        return redirect('home')
+        messages.error(request, 'Permission denied')
+        return redirect('result_list', exam_id=exam_id)
     
     exam = get_object_or_404(Exam, id=exam_id)
     
-    # Get all students for this exam
-    students = Admission.objects.filter(
-        is_admitted=True,
-        course__icontains=exam.stream,
-        batch=exam.batch
-    ).order_by('student_name')
+    # Get the subject from the exam
+    exam_subject = exam.subject
     
-    # Get all results
-    results = StudentResult.objects.filter(
-        exam=exam
-    ).select_related('student')
+    # Extract the base subject name
+    if '_11' in exam_subject:
+        base_subject = exam_subject.replace('_11', '')
+    elif '_12' in exam_subject:
+        base_subject = exam_subject.replace('_12', '')
+    else:
+        base_subject = exam_subject
     
-    # Organize results by student
-    student_results = []
-    for student in students:
-        result = results.filter(student=student).first()
-        student_results.append({
-            'student': student,
-            'result': result,
-            'marks': result.marks_obtained if result and not result.is_absent else 0,
-            'is_absent': result.is_absent if result else False,
-            'percentage': result.percentage if result else 0,
-            'grade': result.grade if result else 'N/A'
-        })
-    
-    # Calculate statistics
-    total_students = students.count()
-    appeared_students = results.filter(is_absent=False).count()
-    passed_students = results.filter(is_absent=False, marks_obtained__gte=exam.passing_marks).count()
-    avg_marks = results.filter(is_absent=False).aggregate(Avg('marks_obtained'))['marks_obtained__avg'] or 0
-    
-    context = {
-        'exam': exam,
-        'student_results': student_results,
-        'total_students': total_students,
-        'appeared_students': appeared_students,
-        'passed_students': passed_students,
-        'avg_marks': avg_marks,
+    # Map subject codes to search terms
+    subject_map = {
+        'odia': ['odia'],
+        'english': ['english'],
+        'physics': ['physics'],
+        'chemistry': ['chemistry'],
+        'mathematics': ['mathematics', 'math'],
+        'biology': ['biology'],
+        'it': ['information technology', 'it'],
+        'electronics': ['electronics'],
     }
-    return render(request, 'institute/result_list.html', context)
+    
+    search_terms = subject_map.get(base_subject.lower(), [base_subject.lower()])
+    
+    # Get all admitted students with matching batch
+    all_students = Admission.objects.filter(
+        is_admitted=True,
+        batch=exam.batch
+    )
+    
+    # Filter students who have this subject
+    students = []
+    student_ids = []
+    for student in all_students:
+        student_subjects = [
+            (student.subject1 or '').lower(),
+            (student.subject2 or '').lower(),
+            (student.subject3 or '').lower(),
+            (student.subject4 or '').lower(),
+            (student.subject5 or '').lower(),
+            (student.subject6 or '').lower(),
+        ]
+        
+        subject_found = False
+        for student_subj in student_subjects:
+            for term in search_terms:
+                if term in student_subj:
+                    subject_found = True
+                    break
+            if subject_found:
+                break
+        
+        if subject_found:
+            students.append(student)
+            student_ids.append(student.id)
+    
+    updated_count = 0
+    errors = []
+    
+    # Debug: Print all POST data
+    print("=" * 50)
+    print(f"Processing bulk update for exam: {exam.name}")
+    print(f"Subject: {base_subject}")
+    print(f"Found {len(students)} students with this subject")
+    
+    for student in students:
+        student_id = student.id
+        marks_key = f'marks_{student_id}'
+        absent_key = f'absent_{student_id}'
+        
+        # Check if this student's data was submitted
+        if marks_key in request.POST or absent_key in request.POST:
+            marks = request.POST.get(marks_key, '').strip()
+            is_absent = request.POST.get(absent_key) == 'on'
+            
+            print(f"Processing {student.student_name} (ID: {student_id}): marks='{marks}', absent={is_absent}")
+            
+            try:
+                # Update or create result
+                result, created = StudentResult.objects.update_or_create(
+                    exam=exam,
+                    student=student,
+                    defaults={
+                        'marks_obtained': marks if marks and not is_absent else 0,
+                        'is_absent': is_absent,
+                        'entered_by': request.user,
+                        'updated_at': timezone.now()
+                    }
+                )
+                
+                updated_count += 1
+                print(f"  → {'Created' if created else 'Updated'} result")
+                
+            except Exception as e:
+                errors.append(f"{student.student_name}: {str(e)}")
+                print(f"  → ERROR: {str(e)}")
+    
+    if errors:
+        for error in errors:
+            messages.error(request, error)
+    
+    if updated_count > 0:
+        messages.success(request, f'Successfully updated {updated_count} student results for {exam.get_subject_display()}!')
+    else:
+        messages.warning(request, 'No changes were saved. Please check the form data.')
+    
+    print(f"Total updated: {updated_count}")
+    print("=" * 50)
+    
+    return redirect('result_list', exam_id=exam.id) 
+
 
 @login_required
 def report_card(request):
@@ -1878,8 +2133,7 @@ def report_card(request):
     download = request.GET.get('download', '')
     
     students = []
-    # Get ALL completed exams initially (will be filtered later)
-    exams = Exam.objects.filter(status='completed').order_by('-exam_date')
+    exams = []
     selected_exam = None
     selected_student = None
     
@@ -1891,12 +2145,69 @@ def report_card(request):
         try:
             selected_student = Admission.objects.get(id=student_id, is_admitted=True)
             
-            # CRITICAL FIX: Filter exams based on student's batch and course
-            exams = Exam.objects.filter(
+            # Get the student's subjects
+            student_subjects = []
+            if selected_student.subject1:
+                student_subjects.append(selected_student.subject1.lower())
+            if selected_student.subject2:
+                student_subjects.append(selected_student.subject2.lower())
+            if selected_student.subject3:
+                student_subjects.append(selected_student.subject3.lower())
+            if selected_student.subject4:
+                student_subjects.append(selected_student.subject4.lower())
+            if selected_student.subject5:
+                student_subjects.append(selected_student.subject5.lower())
+            if selected_student.subject6:
+                student_subjects.append(selected_student.subject6.lower())
+            
+            print(f"Student: {selected_student.student_name}")
+            print(f"Student subjects: {student_subjects}")
+            
+            # Get all completed exams for this batch
+            all_exams = Exam.objects.filter(
                 status='completed',
-                batch=selected_student.batch,  # Match student's batch
-                stream__icontains=selected_student.course  # Match student's course/stream
+                batch=selected_student.batch
             ).order_by('-exam_date')
+            
+            # Filter exams based on student's subjects
+            exams = []
+            for exam in all_exams:
+                # Extract base subject from exam (remove _11 or _12)
+                exam_subject = exam.subject
+                if '_11' in exam_subject:
+                    base_subject = exam_subject.replace('_11', '')
+                elif '_12' in exam_subject:
+                    base_subject = exam_subject.replace('_12', '')
+                else:
+                    base_subject = exam_subject
+                
+                # Map subject codes to display names
+                subject_map = {
+                    'odia': 'odia',
+                    'english': 'english',
+                    'physics': 'physics',
+                    'chemistry': 'chemistry',
+                    'mathematics': 'mathematics',
+                    'biology': 'biology',
+                    'it': 'information technology',
+                    'electronics': 'electronics',
+                }
+                
+                # Get the base subject name for comparison
+                compare_subject = subject_map.get(base_subject.lower(), base_subject.lower())
+                
+                # Check if student takes this subject
+                takes_subject = False
+                for student_subj in student_subjects:
+                    if compare_subject in student_subj or student_subj in compare_subject:
+                        takes_subject = True
+                        break
+                
+                if takes_subject:
+                    exams.append(exam)
+                    print(f"  ✓ {exam.name} - {exam.get_subject_display()} (Student takes this subject)")
+                else:
+                    print(f"  ✗ {exam.name} - {exam.get_subject_display()} (Student does NOT take this subject)")
             
         except Admission.DoesNotExist:
             messages.error(request, 'Student not found.')
@@ -1918,7 +2229,7 @@ def report_card(request):
     
     # Get existing results for the selected student
     exam_results = {}
-    if selected_student:
+    if selected_student and exams:
         results = StudentResult.objects.filter(
             student=selected_student,
             exam__in=exams
@@ -1933,7 +2244,7 @@ def report_card(request):
         'exams': exams,
         'selected_exam': selected_exam,
         'selected_student': selected_student,
-        'exam_results': exam_results,  # Pass results to template
+        'exam_results': exam_results,
     }
     return render(request, 'institute/report_card_search.html', context)
 
@@ -1945,11 +2256,61 @@ def generate_report_card_pdf(request, exam_id, student_id):
         exam = get_object_or_404(Exam, id=exam_id)
         student = get_object_or_404(Admission, id=student_id, is_admitted=True)
         
+        # Check if student actually takes this subject
+        exam_subject = exam.subject
+        if '_11' in exam_subject:
+            base_subject = exam_subject.replace('_11', '')
+        elif '_12' in exam_subject:
+            base_subject = exam_subject.replace('_12', '')
+        else:
+            base_subject = exam_subject
+        
+        # Get student's subjects
+        student_subjects = []
+        if student.subject1:
+            student_subjects.append(student.subject1.lower())
+        if student.subject2:
+            student_subjects.append(student.subject2.lower())
+        if student.subject3:
+            student_subjects.append(student.subject3.lower())
+        if student.subject4:
+            student_subjects.append(student.subject4.lower())
+        if student.subject5:
+            student_subjects.append(student.subject5.lower())
+        if student.subject6:
+            student_subjects.append(student.subject6.lower())
+        
+        # Map subject codes
+        subject_map = {
+            'odia': 'odia',
+            'english': 'english',
+            'physics': 'physics',
+            'chemistry': 'chemistry',
+            'mathematics': 'mathematics',
+            'biology': 'biology',
+            'it': 'information technology',
+            'electronics': 'electronics',
+        }
+        
+        compare_subject = subject_map.get(base_subject.lower(), base_subject.lower())
+        
+        # Verify student takes this subject
+        takes_subject = False
+        for student_subj in student_subjects:
+            if compare_subject in student_subj or student_subj in compare_subject:
+                takes_subject = True
+                break
+        
+        if not takes_subject:
+            messages.error(request, f'{student.student_name} does not take {exam.get_subject_display()}')
+            return redirect('report_card')
+        
         # Get student result for this exam
         try:
             result = StudentResult.objects.get(exam=exam, student=student)
         except StudentResult.DoesNotExist:
             result = None
+
         
         # Create a file-like buffer to receive PDF data
         buffer = io.BytesIO()
@@ -2248,46 +2609,3 @@ def api_get_exam_stats(request, exam_id):
 #     return redirect('result_list', exam_id=exam.id)
 
 
-@login_required
-@require_POST
-def bulk_update_results(request, exam_id):
-    """Bulk update multiple student results at once"""
-    if request.user.user_type != 'admin':
-        messages.error(request, 'Permission denied')
-        return redirect('result_list', exam_id=exam_id)
-    
-    exam = get_object_or_404(Exam, id=exam_id)
-    
-    # Get all students for this exam
-    students = Admission.objects.filter(
-        is_admitted=True,
-        course__icontains=exam.stream,
-        batch=exam.batch
-    )
-    
-    updated_count = 0
-    
-    for student in students:
-        marks_key = f'marks_{student.id}'
-        absent_key = f'absent_{student.id}'
-        
-        marks = request.POST.get(marks_key)
-        is_absent = request.POST.get(absent_key) == 'on'
-        
-        # Only update if the field was present in the form
-        if marks_key in request.POST or absent_key in request.POST:
-            # Get or create result
-            result, created = StudentResult.objects.update_or_create(
-                exam=exam,
-                student=student,
-                defaults={
-                    'marks_obtained': marks if marks and not is_absent else 0,
-                    'is_absent': is_absent,
-                    'entered_by': request.user,
-                    'updated_at': timezone.now()
-                }
-            )
-            updated_count += 1
-    
-    messages.success(request, f'Successfully updated {updated_count} student results!')
-    return redirect('result_list', exam_id=exam.id)

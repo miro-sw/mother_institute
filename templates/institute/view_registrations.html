@@ -645,6 +645,8 @@
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
+
+            
             
             document.body.appendChild(notification);
             
@@ -663,7 +665,7 @@
 
                 fetch(`/toggle-admit/${admissionId}/`, {
                     method: 'POST',
-                    credentials: 'same-origin',
+                    credentials: 'same-origin',  
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken,

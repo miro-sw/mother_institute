@@ -6,7 +6,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 style="color: #1e3a8a;">
-                <i class="fas fa-poll me-2"></i>Student Results
+                <i class="fas fa-poll me-2"></i>{{ subject_display|default:"Student" }} Results
             </h1>
             <p class="text-muted mb-0">
                 <strong>{{ exam.name }}</strong> - {{ exam.batch }} | {{ exam.get_subject_display }}
@@ -15,6 +15,10 @@
                 {% else %}
                 <span class="badge bg-success ms-2">Edit Mode</span>
                 {% endif %}
+            </p>
+            <p class="text-muted small mt-1">
+                <i class="fas fa-info-circle me-1"></i>
+                Showing only students who have selected <strong>{{ subject_display|default:exam.get_subject_display }}</strong> as one of their subjects
             </p>
         </div>
         <div>
@@ -29,7 +33,7 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm">
                 <div class="card-body text-center">
-                    <h6 class="text-muted">Total Students</h6>
+                    <h6 class="text-muted">Students Taking {{ subject_display|default:"This Subject" }}</h6>
                     <h3>{{ total_students }}</h3>
                 </div>
             </div>
@@ -64,7 +68,7 @@
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0" style="color: #1e3a8a;">
-                <i class="fas fa-table me-2"></i>Student Results
+                <i class="fas fa-table me-2"></i>Student Results - {{ subject_display|default:exam.get_subject_display }}
             </h5>
             <div>
                 <span class="badge bg-info me-2">
@@ -105,9 +109,16 @@
                                     <strong>{{ data.student.student_name }}</strong>
                                     <br>
                                     <small class="text-muted">{{ data.student.mobile_number }}</small>
+                                    <br>
+                                    <small class="text-muted">
+                                        Subjects: 
+                                        {% if data.student.subject1 %}{{ data.student.subject1 }}{% endif %}
+                                        {% if data.student.subject2 %}, {{ data.student.subject2 }}{% endif %}
+                                        {% if data.student.subject3 %}, {{ data.student.subject3 }}{% endif %}
+                                    </small>
                                 </td>
                                 <td class="text-center">
-                                    <!-- ALWAYS SHOW EDITABLE TEXT BOX - Removed the condition -->
+                                    <!-- ALWAYS SHOW EDITABLE TEXT BOX -->
                                     <div class="d-flex justify-content-center align-items-center">
                                         <input type="number" 
                                                 class="form-control form-control-sm marks-input text-center" 
@@ -180,7 +191,8 @@
                             <tr>
                                 <td colspan="8" class="text-center py-4">
                                     <i class="fas fa-poll fa-3x text-muted mb-3"></i>
-                                    <p class="text-muted">No results found for this exam.</p>
+                                    <p class="text-muted">No students found who take <strong>{{ subject_display|default:exam.get_subject_display }}</strong> as a subject.</p>
+                                    <p class="text-muted small">Total students in batch {{ exam.batch }}: {{ total_admitted_students|default:0 }}</p>
                                     <a href="{% url 'result_entry' exam.id %}" class="btn btn-primary">
                                         <i class="fas fa-plus-circle me-1"></i> Enter Results
                                     </a>
@@ -215,9 +227,6 @@
                 <button class="btn btn-outline-primary me-2" onclick="exportToCSV()">
                     <i class="fas fa-file-csv me-1"></i> Export to CSV
                 </button>
-                {% comment %} <button class="btn btn-outline-danger" onclick="window.print()">
-                    <i class="fas fa-print me-1"></i> Print
-                </button> {% endcomment %}
             </div>
             {% endif %} 
         </div>
@@ -399,7 +408,6 @@ function resetChanges() {
     updateChangesCount();
 }
 
-
 // Export to CSV
 function exportToCSV() {
     const rows = [['#', 'Admission ID', 'Student Name', 'Marks Obtained', 'Status', 'Percentage', 'Grade', 'Absent']];
@@ -431,8 +439,6 @@ function exportToCSV() {
     a.click();
     window.URL.revokeObjectURL(url);
 }
-
-
 </script>
 
 <style>

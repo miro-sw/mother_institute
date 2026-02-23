@@ -257,18 +257,24 @@ class Exam(models.Model):
     
     SUBJECT_CHOICES = [
         # 11th Science Subjects
+        ('odia_11', 'Odia (11th Science)'),
+        ('english_11', 'English (11th Science)'),
         ('physics_11', 'Physics (11th Science)'),
         ('chemistry_11', 'Chemistry (11th Science)'),
         ('mathematics_11', 'Mathematics (11th Science)'),
         ('biology_11', 'Biology (11th Science)'),
-        ('english_11', 'English (11th Science)'),
+        ('IT_11', 'Information Technology (11th Science)'),
+        ('electronics_11', 'Electronics (11th Science)'),
         
         # 12th Science Subjects
+        ('odia_12', 'Odia (12th Science)'),
+        ('english_12', 'English (12th Science)'),
         ('physics_12', 'Physics (12th Science)'),
         ('chemistry_12', 'Chemistry (12th Science)'),
         ('mathematics_12', 'Mathematics (12th Science)'),
         ('biology_12', 'Biology (12th Science)'),
-        ('english_12', 'English (12th Science)'),
+        ('IT_12', 'Information Technology (12th Science)'),
+        ('electronics_12', 'Electronics (12th Science)'),
     ]
     
     STREAM_CHOICES = [
