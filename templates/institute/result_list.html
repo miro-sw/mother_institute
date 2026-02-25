@@ -410,12 +410,13 @@ function resetChanges() {
 
 // Export to CSV
 function exportToCSV() {
-    const rows = [['#', 'Admission ID', 'Student Name', 'Marks Obtained', 'Status', 'Percentage', 'Grade', 'Absent']];
+    const rows = [['Sl. No.', 'Admission ID', 'Student Name', 'Marks Obtained', 'Status', 'Percentage', 'Grade', 'Absent']];
     
     document.querySelectorAll('#resultsTable tbody tr').forEach((row, index) => {
         if (row.cells.length > 1 && !row.querySelector('td[colspan]')) {
             const admissionId = row.cells[1].textContent.trim();
             const studentName = row.cells[2].textContent.trim().split('\n')[0];
+            
             const marks = row.cells[3].querySelector('input') ? 
                             row.cells[3].querySelector('input').value : 
                             row.cells[3].textContent.trim();

@@ -54,45 +54,80 @@
                             <td>{{ admission.created_at|date:"d/m/Y" }}</td>
                             <td>
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input admit-checkbox" type="checkbox" role="switch"
-                                        data-admission-id="{{ admission.id }}" {% if admission.is_admitted %}checked{% endif %}>
-                                    <span class="admit-badge">
-                                        {% if admission.is_admitted %}
-                                            <span class="badge bg-success">Yes</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">No</span>
-                                        {% endif %}
-                                    </span>
+                                    {% if admission.has_transactions %}
+                                        <!-- Show disabled checkbox with tooltip if student has transactions -->
+                                        <input class="form-check-input admit-checkbox" 
+                                                type="checkbox" 
+                                                role="switch"
+                                                data-admission-id="{{ admission.id }}" 
+                                                {% if admission.is_admitted %}checked{% endif %}
+                                                disabled
+                                                title="Cannot change admission status - Student has transactions (payments/exams)">
+                                        <span class="admit-badge">
+                                            {% if admission.is_admitted %}
+                                                <span class="badge bg-success">Yes</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">No</span>
+                                            {% endif %}
+                                        </span>
+                                        <i class="fas fa-lock text-muted ms-1" 
+                                            title="Locked due to existing transactions"></i>
+                                    {% else %}
+                                        <!-- Normal editable checkbox -->
+                                        <input class="form-check-input admit-checkbox" 
+                                                type="checkbox" 
+                                                role="switch"
+                                                data-admission-id="{{ admission.id }}" 
+                                                {% if admission.is_admitted %}checked{% endif %}>
+                                        <span class="admit-badge">
+                                            {% if admission.is_admitted %}
+                                                <span class="badge bg-success">Yes</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">No</span>
+                                            {% endif %}
+                                        </span>
+                                    {% endif %}
                                 </div>
                             </td>
                             <td>
                                 <!-- View Details Button -->
                                 <button type="button" 
                                         class="btn btn-sm btn-outline-info me-1 view-details-btn" 
-                                        data-admission-id="{{ admission.id }}">
+                                        data-admission-id="{{ admission.id }}"
+                                        title="View student details">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 
                                 <!-- Edit Button -->
                                 <a href="{% url 'search_admission' %}?search={{ admission.admission_id|default:admission.mobile_number }}" 
-                                    class="btn btn-sm btn-outline-warning me-1">
+                                    class="btn btn-sm btn-outline-warning me-1"
+                                    title="Edit student information">
                                     <i class="fas fa-edit"></i>
                                 </a>
                                 
-                                <!-- Delete Button - Only show if NOT admitted -->
-                                {% if not admission.is_admitted %}
+                                <!-- Delete Button - Conditional based on admission status and transactions -->
+                                {% if not admission.is_admitted and not admission.has_transactions %}
                                 <button type="button" 
                                         class="btn btn-sm btn-outline-danger delete-btn" 
                                         data-admission-id="{{ admission.id }}"
-                                        data-student-name="{{ admission.student_name }}">
+                                        data-student-name="{{ admission.student_name }}"
+                                        title="Delete registration">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
-                                {% else %}
-                                <!-- Show disabled delete button for admitted students (optional) -->
+                                {% elif admission.is_admitted %}
+                                <!-- Show disabled delete button for admitted students -->
                                 <button type="button" 
                                         class="btn btn-sm btn-outline-secondary" 
                                         disabled
                                         title="Cannot delete admitted students">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% elif admission.has_transactions %}
+                                <!-- Show disabled delete button for students with transactions -->
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-secondary" 
+                                        disabled
+                                        title="Cannot delete - Student has transactions (payments/exams)">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                                 {% endif %}
@@ -100,7 +135,10 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center">No registrations found</td>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">No registrations found</p>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -199,6 +237,33 @@
     </div>
 </div>
 
+<!-- Transaction Warning Modal -->
+<div class="modal fade" id="transactionWarningModal" tabindex="-1" aria-labelledby="transactionWarningModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title" id="transactionWarningModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Cannot Change Status
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>This student has existing transactions (payments, expenses, or exam results).</p>
+                <p class="mb-0"><strong>To change admission status:</strong></p>
+                <ul class="mt-2">
+                    <li>First delete all associated transactions</li>
+                    <li>Or contact administrator for assistance</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .modal-header {
         background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
@@ -234,6 +299,12 @@
         border-color: #6c757d;
         color: #6c757d;
         cursor: not-allowed;
+        opacity: 0.65;
+    }
+    
+    .btn-outline-secondary:hover {
+        background-color: transparent;
+        color: #6c757d;
     }
     
     .badge {
@@ -251,6 +322,35 @@
         background-color: #f8d7da;
         transition: background-color 0.5s ease;
     }
+    
+    .form-check-input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .fa-lock {
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+    
+    [title] {
+        cursor: help;
+    }
+    
+    .detail-row {
+        margin-bottom: 8px;
+        padding: 4px 0;
+        border-bottom: 1px dashed #e9ecef;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .detail-value {
+        color: #212529;
+    }
 </style>
 
 <script>
@@ -258,6 +358,7 @@
         // Initialize modals
         const viewModal = new bootstrap.Modal(document.getElementById('viewModal'));
         const deleteConfirmModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+        const transactionWarningModal = new bootstrap.Modal(document.getElementById('transactionWarningModal'));
         
         const modalBody = document.getElementById('modalBody');
         const editAdmissionBtn = document.getElementById('editAdmissionBtn');
@@ -374,7 +475,7 @@
                             // Check if table is empty and show message
                             const tbody = document.querySelector('tbody');
                             if (tbody.children.length === 0) {
-                                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No registrations found</td></tr>';
+                                tbody.innerHTML = '<tr><td colspan="8" class="text-center py-4"><i class="fas fa-users fa-3x text-muted mb-3"></i><p class="text-muted">No registrations found</p></td></tr>';
                             }
                         }, 500);
                     }
@@ -500,7 +601,7 @@
                 <div class="row mb-4">
                     <div class="col-md-12">
                         <h6 class="border-bottom pb-2 mb-3" style="color: #1e3a8a;">
-                            <i class="fas fa-users me-2"></i>Subject Details 
+                            <i class="fas fa-book-open me-2"></i>Subject Details
                         </h6>
                         <div class="row detail-row">
                             <div class="col-4 detail-label">Subject 1:</div>
@@ -527,7 +628,7 @@
                             <div class="col-8 detail-value">${admission.subject6 || 'Not provided'}</div>
                         </div>
                     </div>
-
+                </div>
 
                 <div class="row mb-4">
                     <div class="col-md-12">
@@ -552,7 +653,6 @@
                         </div>
                     </div>
                 </div>
-
                 
                 <div class="row mb-4">
                     <div class="col-md-12">
@@ -570,10 +670,6 @@
                         <div class="row detail-row">
                             <div class="col-4 detail-label">College Fees:</div>
                             <div class="col-8 detail-value">₹${admission.admitted_college_fees || '0.00'}</div>
-                        </div>
-                        <div class="row detail-row">
-                            <div class="col-4 detail-label">Transportation:</div>
-                            <div class="col-8 detail-value">${admission.college_transportation || 'Not provided'}</div>
                         </div>
                     </div>
                 </div>
@@ -604,11 +700,6 @@
                                     <span class="badge bg-${admission.is_admitted ? 'success' : 'secondary'}">
                                         ${admission.is_admitted ? 'Yes' : 'No'}
                                     </span>
-                                </div>
-                            </div>
-                            <div class="row mt-2">
-                                <div class="col-md-12">
-                                    <strong>Database ID:</strong> ${admission.id}
                                 </div>
                             </div>
                         </div>
@@ -645,8 +736,6 @@
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
-
-            
             
             document.body.appendChild(notification);
             
@@ -655,17 +744,24 @@
             }, 3000);
         }
 
-        // Handle admit checkbox toggles
-        const admitCheckboxes = document.querySelectorAll('.admit-checkbox');
+        // Handle admit checkbox toggles - only for enabled checkboxes
+        const admitCheckboxes = document.querySelectorAll('.admit-checkbox:not(:disabled)');
+        
         admitCheckboxes.forEach(cb => {
             cb.addEventListener('change', function(e) {
                 const admissionId = this.getAttribute('data-admission-id');
                 const isChecked = this.checked;
                 const csrftoken = getCookie('csrftoken');
+                
+                // Show confirmation dialog
+                if (!confirm(`Are you sure you want to ${isChecked ? 'admit' : 'remove admission for'} this student?`)) {
+                    this.checked = !isChecked; // Revert the checkbox
+                    return;
+                }
 
                 fetch(`/toggle-admit/${admissionId}/`, {
                     method: 'POST',
-                    credentials: 'same-origin',  
+                    credentials: 'same-origin',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrftoken,
@@ -686,14 +782,16 @@
                         const badgeSpan = cb.closest('td').querySelector('.admit-badge');
                         if (data.is_admitted) {
                             badgeSpan.innerHTML = '<span class="badge bg-success">Yes</span>';
+                            showNotification('success', 'Student admitted successfully!');
                         } else {
                             badgeSpan.innerHTML = '<span class="badge bg-secondary">No</span>';
+                            showNotification('success', 'Student admission removed!');
                         }
                         
-                        // Refresh the page to update delete buttons visibility
+                        // Refresh the page after a short delay to update delete buttons
                         setTimeout(() => {
                             location.reload();
-                        }, 500);
+                        }, 1500);
                     } else {
                         alert('Error: ' + (data && data.error ? data.error : 'Could not update status'));
                         cb.checked = !isChecked;
@@ -701,10 +799,23 @@
                 })
                 .catch(err => {
                     console.error('Admit toggle error:', err);
-                    alert('Error updating admitted status: ' + (err.message || err));
+                    
+                    // Check if error is due to transactions
+                    if (err.message && err.message.includes('transactions')) {
+                        transactionWarningModal.show();
+                    } else {
+                        alert('Error updating admitted status: ' + (err.message || err));
+                    }
+                    
                     cb.checked = !isChecked;
                 });
             });
+        });
+        
+        // Add tooltips to all elements with title attribute
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     });
 </script>

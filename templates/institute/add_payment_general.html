@@ -25,16 +25,20 @@
                     <div id="searchResults" class="list-group"
                         style="max-height: 300px; overflow-y: auto; display: none;"></div>
 
+                    <!-- Update the student selection dropdown to show count -->
                     <div class="mt-3">
                         <label class="form-label">Or Select from List</label>
                         <select id="studentSelect" class="form-select" onchange="selectStudent()">
-                            <option value="">-- Choose a student --</option>
+                            <option value="">-- Choose an admitted student --</option>
                             {% for student in students %}
                             <option value="{{ student.id }}">
                                 {{ student.admission_id }} - {{ student.student_name }}
                             </option>
                             {% endfor %}
                         </select>
+                        <small class="text-muted">
+                            Showing {{ students|length }} admitted student{{ students|length|pluralize }}
+                        </small>
                     </div>
                 </div>
             </div>

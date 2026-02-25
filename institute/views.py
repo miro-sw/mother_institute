@@ -1,5 +1,3 @@
-# views.py - UPDATE THE search_admission VIEW AND ADD HELPER FUNCTIONS
-
 from django.shortcuts import render, redirect, get_object_or_404 
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -15,7 +13,7 @@ from django.db.models import Q, Count, Avg, Sum, Max, Min
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import  A4, letter
+from reportlab.lib.pagesizes import  A4, letter, landscape
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -31,8 +29,7 @@ from django.utils import timezone
 @login_required
 def toggle_admit(request, admission_id):
     """Toggle or set admission.is_admitted via AJAX POST.
-    Expects JSON body: { "is_admitted": true/false } or will toggle if missing.
-    Returns JSON errors (no redirects) so client can handle them.
+    Prevent changing to 'No' if student has transactions.
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid method'}, status=405)
@@ -56,6 +53,19 @@ def toggle_admit(request, admission_id):
             desired = bool(payload.get('is_admitted'))
         else:
             desired = not admission.is_admitted
+
+        # CRITICAL CHECK: If trying to set to False (No) and student has transactions, block it
+        if not desired and admission.is_admitted:
+            # Check if student has any payments, expenses, or exam results
+            has_payments = Payment.objects.filter(admission=admission).exists()
+            has_expenses = Expense.objects.filter(admission=admission).exists()
+            has_exam_results = StudentResult.objects.filter(student=admission).exists()
+            
+            if has_payments or has_expenses or has_exam_results:
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Cannot remove admission status. Student has existing transactions (payments, expenses, or exam results).'
+                }, status=400)
 
         admission.is_admitted = desired
         if desired:
@@ -1306,7 +1316,7 @@ def admissions_list(request):
 
 @login_required
 def search_students(request):
-    """API endpoint for searching students"""
+    """API endpoint for searching students - ONLY RETURN ADMITTED STUDENTS"""
     if request.user.user_type != 'admin':
         return JsonResponse({'results': []})
 
@@ -1314,7 +1324,10 @@ def search_students(request):
     if len(query) < 2:
         return JsonResponse({'results': []})
     
+    # CRITICAL FIX: Only search among ADMITTED students
     students_query = Admission.objects.filter(
+        is_admitted=True,  # Only admitted students
+    ).filter(
         Q(student_name__icontains=query) |
         Q(admission_id__icontains=query) |
         Q(mobile_number__icontains=query)
@@ -1347,7 +1360,7 @@ def search_students(request):
 @login_required
 def delete_registration(request, admission_id):
     """
-    Delete a registration only if the student is not admitted
+    Delete a registration only if the student is not admitted and has no transactions
     """
     try:
         admission = Admission.objects.get(id=admission_id)
@@ -1357,6 +1370,17 @@ def delete_registration(request, admission_id):
             return JsonResponse({
                 'success': False, 
                 'error': 'Cannot delete admitted students'
+            }, status=400)
+        
+        # Check if student has any transactions
+        has_payments = Payment.objects.filter(admission=admission).exists()
+        has_expenses = Expense.objects.filter(admission=admission).exists()
+        has_exam_results = StudentResult.objects.filter(student=admission).exists()
+        
+        if has_payments or has_expenses or has_exam_results:
+            return JsonResponse({
+                'success': False, 
+                'error': 'Cannot delete student with existing transactions (payments, expenses, or exam results)'
             }, status=400)
         
         # Store student name for response message
@@ -1381,15 +1405,16 @@ def delete_registration(request, admission_id):
             'error': str(e)
         }, status=500)
         
-        
 @login_required
 def get_student_details_by_id(request, student_id):
-    """API endpoint to get student details by ID"""
+    """API endpoint to get student details by ID - ONLY FOR ADMITTED STUDENTS"""
     if request.user.user_type != 'admin':
         return JsonResponse({'success': False, 'error': 'Unauthorized'}, status=403)
 
     try:
-        student = Admission.objects.get(id=student_id)
+        # CRITICAL FIX: Only get if student is admitted
+        student = Admission.objects.get(id=student_id, is_admitted=True)
+        
         # Calculate total payments
         total_payments = Payment.objects.filter(admission=student).aggregate(
             total=Sum('amount')
@@ -1410,9 +1435,10 @@ def get_student_details_by_id(request, student_id):
         
         return JsonResponse({'success': True, 'data': data})
     except Admission.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Student not found'})
+        return JsonResponse({'success': False, 'error': 'Admitted student not found'})
     
-    # Add this new view to views.py
+
+
 @login_required
 def view_registrations(request):
     """View-only page for registrations (no edit form)"""
@@ -1431,6 +1457,15 @@ def view_registrations(request):
             Q(admission_id__icontains=search_query.upper())
         )
     
+    # Add transaction check for each admission
+    for admission in admissions_list:
+        # Check if student has any payments or expenses
+        has_payments = Payment.objects.filter(admission=admission).exists()
+        has_expenses = Expense.objects.filter(admission=admission).exists()
+        has_exam_results = StudentResult.objects.filter(student=admission).exists()
+        
+        admission.has_transactions = has_payments or has_expenses or has_exam_results
+    
     # Pagination
     page = request.GET.get('page', 1)
     paginator = Paginator(admissions_list, 10)
@@ -1448,10 +1483,9 @@ def view_registrations(request):
     }
     return render(request, 'institute/view_registrations.html', context)
 
-# In views.py - UPDATE the add_expense_general function
 @login_required
 def add_expense_general(request):
-    """Add expense with student selection - FIXED VERSION"""
+    """Add expense with student selection - ONLY SHOW ADMITTED STUDENTS"""
     if request.user.user_type != 'admin':
         messages.error(request, 'Access denied. Admin only.')
         return redirect('home')
@@ -1461,18 +1495,18 @@ def add_expense_general(request):
     
     if selected_admission_id:
         try:
-            admission = Admission.objects.get(id=selected_admission_id)
+            admission = Admission.objects.get(id=selected_admission_id, is_admitted=True)  # Only admitted
         except Admission.DoesNotExist:
-            messages.error(request, 'Student not found.')
+            messages.error(request, 'Admitted student not found.')
     
     if request.method == 'POST':
         form = ExpenseForm(request.POST)
         if form.is_valid():
             if not admission:
-                messages.error(request, 'Please select a student first.')
+                messages.error(request, 'Please select an admitted student first.')
                 return render(request, 'institute/add_expense_general.html', {
                     'form': form,
-                    'students': Admission.objects.all().order_by('student_name'),
+                    'students': Admission.objects.filter(is_admitted=True).order_by('student_name'),  # Only admitted
                     'title': 'Add Expense'
                 })
             
@@ -1480,7 +1514,6 @@ def add_expense_general(request):
             expense.admission = admission
             expense.added_by = request.user
             
-            # Save the expense
             try:
                 expense.save()
                 messages.success(request, f'Expense of ₹{expense.amount} added successfully!')
@@ -1492,22 +1525,22 @@ def add_expense_general(request):
     else:
         form = ExpenseForm()
     
-    # Get all students for selection
-    students = Admission.objects.all().order_by('student_name')
+    # CRITICAL FIX: Only show ADMITTED students in the dropdown
+    students = Admission.objects.filter(is_admitted=True).order_by('student_name')
     
     context = {
         'form': form,
         'admission': admission,
         'students': students,
-        'title': 'Add Expense'
+        'title': 'Add Expense',
+        'total_students': students.count(),
     }
     return render(request, 'institute/add_expense_general.html', context)
 
 
-# In views.py - UPDATE the add_payment_general function
 @login_required
 def add_payment_general(request):
-    """Add payment with student selection - FIXED VERSION"""
+    """Add payment with student selection - ONLY SHOW ADMITTED STUDENTS"""
     if request.user.user_type != 'admin':
         messages.error(request, 'Access denied. Admin only.')
         return redirect('home')
@@ -1517,18 +1550,18 @@ def add_payment_general(request):
     
     if selected_admission_id:
         try:
-            admission = Admission.objects.get(id=selected_admission_id)
+            admission = Admission.objects.get(id=selected_admission_id, is_admitted=True)  # Only admitted
         except Admission.DoesNotExist:
-            messages.error(request, 'Student not found.')
+            messages.error(request, 'Admitted student not found.')
     
     if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
             if not admission:
-                messages.error(request, 'Please select a student first.')
+                messages.error(request, 'Please select an admitted student first.')
                 return render(request, 'institute/add_payment_general.html', {
                     'form': form,
-                    'students': Admission.objects.all().order_by('student_name'),
+                    'students': Admission.objects.filter(is_admitted=True).order_by('student_name'),  # Only admitted
                     'title': 'Add Payment'
                 })
             
@@ -1536,7 +1569,6 @@ def add_payment_general(request):
             payment.admission = admission
             payment.received_by = request.user
             
-            # Save the payment (receipt number will be auto-generated)
             try:
                 payment.save()
                 messages.success(request, f'Payment of ₹{payment.amount} recorded successfully! Receipt: {payment.receipt_number}')
@@ -1548,14 +1580,15 @@ def add_payment_general(request):
     else:
         form = PaymentForm()
     
-    # Get all students for selection
-    students = Admission.objects.all().order_by('student_name')
+    # CRITICAL FIX: Only show ADMITTED students in the dropdown
+    students = Admission.objects.filter(is_admitted=True).order_by('student_name')
     
     context = {
         'form': form,
         'admission': admission,
         'students': students,
-        'title': 'Add Payment'
+        'title': 'Add Payment',
+        'total_students': students.count(),
     }
     return render(request, 'institute/add_payment_general.html', context)
 
