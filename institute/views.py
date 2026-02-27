@@ -52,6 +52,7 @@ def toggle_admit(request, admission_id):
         if 'is_admitted' in payload:
             desired = bool(payload.get('is_admitted'))
         else:
+            
             desired = not admission.is_admitted
 
         # CRITICAL CHECK: If trying to set to False (No) and student has transactions, block it
@@ -85,6 +86,7 @@ def toggle_admit(request, admission_id):
 
 def home(request):
     return render(request, 'institute/index.html')
+
 
 def user_login(request):
     if request.method == 'POST':
